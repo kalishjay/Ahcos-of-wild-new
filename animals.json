@@ -1,0 +1,875 @@
+{
+  "dataset": {
+    "title": "Echoes of the Wild — Sri Lankan Wildlife Knowledge Base",
+    "version": "1.0.0",
+    "created_at": "2026-10-10",
+    "language": "en",
+    "supported_search_languages": [
+      "en",
+      "si",
+      "ta"
+    ],
+    "mode": "offline_static_json",
+    "species_count": 3,
+    "description": "Editorial wildlife knowledge entries prepared for an offline museum species directory and keyword search. Educational text, not a live biological database.",
+    "integration_notes": [
+      "This file contains data, not an executable search engine; the React Native search function must load and query it.",
+      "Place it inside the source project, for example assets/data/animals.json, then import or require it from JavaScript/TypeScript.",
+      "Existing app IDs, image asset names, navigation routes and data types have not been inspected. Map these fields to the existing schema before final APK rebuild.",
+      "Do not overwrite an existing species.json without checking its consumers; merge or adapt entries to match existing IDs.",
+      "To search, normalize input text and compare with search_terms, alternate_names, taxonomy.scientific_name, title and educational section text.",
+      "No external API, cloud database, AI model, internet request or sensitive location coordinates are required.",
+      "Image and 3D asset keys below are suggested placeholders, not verified paths. Set these to real asset references when source files arrive.",
+      "Scientific status and taxonomy can change; verify linked references before public publication."
+    ],
+    "suggested_search_fields": [
+      "name.en",
+      "name.si",
+      "name.ta",
+      "name.alternate_names",
+      "taxonomy.scientific_name",
+      "search_terms",
+      "overview.short",
+      "overview.detailed",
+      "physical_description.features",
+      "habitat.habitat_types",
+      "habitat.distribution_summary",
+      "diet.primary_foods",
+      "behavior.patterns",
+      "conservation.threats",
+      "ecological_importance.roles",
+      "facts",
+      "faq.question",
+      "faq.answer"
+    ],
+    "search_implementation_hint": "Score exact/starts-with name matches above aliases/keywords; keyword matches above long-text matches. Lowercase Latin characters, trim spaces, and preserve Sinhala/Tamil characters. Support multi-word queries by token matching. Avoid searching references URLs."
+  },
+  "species": [
+    {
+      "id": "sri-lankan-leopard",
+      "slug": "sri-lankan-leopard",
+      "asset_key": "leopard",
+      "featured": true,
+      "name": {
+        "en": "Sri Lankan Leopard",
+        "si": "ශ්‍රී ලංකා කොටියා",
+        "ta": "இலங்கைச் சிறுத்தை",
+        "alternate_names": [
+          "Ceylon Leopard",
+          "Leopard",
+          "Kotiya",
+          "Kotiyā",
+          "Diviya (also used colloquially)",
+          "Sri Lanka leopard",
+          "Sri Lankan Panther"
+        ]
+      },
+      "taxonomy": {
+        "scientific_name": "Panthera pardus kotiya",
+        "parent_species": "Panthera pardus",
+        "taxonomic_rank": "Subspecies",
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Carnivora",
+        "family": "Felidae",
+        "genus": "Panthera",
+        "species": "Panthera pardus",
+        "subspecies": "kotiya",
+        "authority": "Deraniyagala, 1956"
+      },
+      "overview": {
+        "short": "Sri Lanka's only native leopard subspecies and the island's largest wild cat, recognized by its rosette-patterned coat and role as an apex predator.",
+        "detailed": "The Sri Lankan leopard is a geographically distinct form of the leopard that occurs naturally only on Sri Lanka. It is an adaptable carnivore found in dry-zone forests, wet-zone forests and central highland landscapes wherever prey and cover remain. In the absence of wild tigers and lions on the island, leopards function as top predators in many ecosystems. Its survival depends on connected habitats, healthy prey populations and minimizing human-caused deaths.",
+        "museum_story": "A flash of gold between the trees may be all a visitor sees. The leopard's rosettes blend with shadows and foliage while its quiet movement allows it to approach prey. Although visitors often associate the cat with famous dry-zone parks, its conservation also matters in misty hill-country and rainforest landscapes."
+      },
+      "physical_description": {
+        "appearance": "A muscular, large-bodied cat with a yellow-gold to ochre coat marked by dark rosettes; solid dark spots appear on parts of the face and limbs. Its lighter underside, powerful shoulders, long balancing tail and retractable claws support stealth and agility.",
+        "features": [
+          "Dark rosettes are irregular rings of spots rather than tiger-like stripes.",
+          "Individual coat patterns can help researchers identify cats in camera-trap images.",
+          "Powerful jaws, sharp canine teeth and retractable claws are adapted to catching vertebrate prey.",
+          "Long whiskers and acute hearing help navigation and hunting under low-light conditions.",
+          "Adult males generally have a heavier build than adult females."
+        ],
+        "size_note": "Body mass and size vary by individual, sex, age and study area. Avoid treating one average as a universal measurement."
+      },
+      "habitat": {
+        "is_endemic_to_sri_lanka": true,
+        "range_countries": [
+          "Sri Lanka"
+        ],
+        "habitat_types": [
+          "Dry-zone monsoon forest",
+          "Scrub and rocky landscapes",
+          "Wet-zone rainforest",
+          "Montane forest",
+          "Forest-edge mosaics"
+        ],
+        "distribution_summary": "The subspecies is native only to Sri Lanka and persists across separated parts of the island, from lowland dry forests to wetter and higher-altitude habitats. Occurrence and abundance vary greatly among locations.",
+        "illustrative_places": [
+          "Yala National Park",
+          "Wilpattu National Park",
+          "Horton Plains region",
+          "Central Highlands",
+          "Sinharaja landscape"
+        ],
+        "movement_and_shelter": "Leopards use dense cover, rocky outcrops, forest vegetation and terrain to rest, travel and conceal themselves. They require sufficiently large areas with suitable prey and safe movement routes.",
+        "place_note": "Examples are broad landscapes, not real-time sighting predictions or animal location records."
+      },
+      "diet": {
+        "type": "Carnivore",
+        "primary_foods": [
+          "Spotted deer (chital)",
+          "Sambar deer",
+          "Wild boar",
+          "Smaller mammals"
+        ],
+        "other_foods": [
+          "Monkeys where available",
+          "Birds and other vertebrates opportunistically",
+          "Domestic animals in some conflict situations"
+        ],
+        "hunting_methods": [
+          "Typically stalks quietly using cover",
+          "Uses short, powerful rushes when within striking distance",
+          "May hunt by day or night depending on habitat, prey and disturbance"
+        ],
+        "feeding_note": "Actual prey composition changes by habitat. Not all listed prey occur in every leopard landscape."
+      },
+      "behavior": {
+        "activity": "Flexible activity pattern; commonly crepuscular or nocturnal, but daytime sightings occur.",
+        "social_structure": "Generally solitary outside mating and mother-cub associations.",
+        "patterns": [
+          "Communicates through scent marking, scrapes, vocalizations and other signs.",
+          "Individuals maintain home ranges that can overlap and differ by sex, prey availability and landscape.",
+          "Can climb trees and may use elevated resting places.",
+          "Uses cover, silence and short-distance acceleration rather than long pursuits.",
+          "Females care for dependent cubs until they can hunt independently."
+        ],
+        "communication": [
+          "Scent marks",
+          "Scrapes",
+          "Growls and other cat vocalizations"
+        ]
+      },
+      "reproduction": {
+        "breeding": "Breeding is not tied to a single narrowly defined season throughout the entire island.",
+        "gestation": "Approximately three months, as is typical for leopards.",
+        "offspring": "Litters commonly contain two or three cubs, but litter size varies.",
+        "care": "The mother conceals, moves, protects and feeds cubs; young remain dependent for many months.",
+        "research_note": "These are general leopard life-history characteristics and should not be interpreted as a Sri Lanka-specific census."
+      },
+      "ecological_importance": {
+        "roles": [
+          "Apex predator",
+          "Helps shape the distribution and behavior of prey populations",
+          "Indicator of connected wildlife habitat",
+          "Flagship animal for Sri Lankan conservation and nature education"
+        ],
+        "explanation": "By preying on herbivores and other mammals, leopards form part of natural food-web dynamics. Conserving the habitats they need can also benefit many less conspicuous species."
+      },
+      "conservation": {
+        "iucn_category": "Vulnerable",
+        "iucn_code": "VU",
+        "assessment_scope": "Subspecies: Panthera pardus kotiya",
+        "assessment_year": 2020,
+        "population_trend": "Probably decreasing; precise current totals require continued surveys.",
+        "legal_note": "Leopards are protected wildlife in Sri Lanka; intentionally harming, trapping or trading them may carry legal consequences.",
+        "threats": [
+          "Habitat loss and fragmentation",
+          "Wire snares and accidental trapping",
+          "Retaliatory killing after livestock conflict",
+          "Road and infrastructure risks",
+          "Declines in wild prey",
+          "Disturbance around habitat corridors"
+        ],
+        "conservation_actions": [
+          "Protect and restore forest connections and movement corridors",
+          "Prevent and remove indiscriminate wire snares through authorized programs",
+          "Improve livestock protection and community-based conflict prevention",
+          "Use camera-trap surveys and scientific monitoring",
+          "Support responsible tourism that does not crowd or bait animals"
+        ],
+        "visitor_actions": [
+          "Keep a respectful distance",
+          "Do not feed or provoke wildlife",
+          "Do not disclose sensitive den or cub locations online",
+          "Report injured or snared wildlife to relevant authorities"
+        ]
+      },
+      "facts": [
+        "The Sri Lankan leopard is a subspecies, while the leopard Panthera pardus is the wider species.",
+        "It is the island's largest native wild cat.",
+        "Its spotted coat contains rosettes, unlike a tiger's vertical stripes.",
+        "Leopards occur beyond the dry-zone parks where tourists most often photograph them.",
+        "Each individual's spot pattern can support non-invasive monitoring from photographs.",
+        "A top predator's conservation benefits from protecting entire connected ecosystems.",
+        "The IUCN's 2020 subspecies assessment classified it as Vulnerable, not Endangered."
+      ],
+      "faq": [
+        {
+          "question": "Is the Sri Lankan leopard endemic?",
+          "answer": "Yes. Panthera pardus kotiya is a leopard subspecies native only to Sri Lanka."
+        },
+        {
+          "question": "Is the Sri Lankan leopard a tiger?",
+          "answer": "No. Leopards have spotted rosettes; tigers have stripes and belong to Panthera tigris."
+        },
+        {
+          "question": "Where does it live?",
+          "answer": "Across suitable Sri Lankan habitats including dry forests, rainforests and the central highlands, with uneven distribution."
+        },
+        {
+          "question": "What does it eat?",
+          "answer": "Mainly mammals such as deer, wild boar and smaller animals, depending on the habitat."
+        },
+        {
+          "question": "Why is it threatened?",
+          "answer": "Key pressures include snares, habitat fragmentation, human-wildlife conflict and declines in prey."
+        },
+        {
+          "question": "What is its IUCN status?",
+          "answer": "The 2020 IUCN subspecies assessment lists the Sri Lankan leopard as Vulnerable (VU)."
+        },
+        {
+          "question": "Is it active only at night?",
+          "answer": "No. Leopards can be active during daylight, dusk or darkness depending on conditions."
+        },
+        {
+          "question": "How can people help?",
+          "answer": "Support habitat and corridor protection, prevent snaring, protect livestock responsibly, and avoid disturbing wild cats."
+        }
+      ],
+      "search_terms": [
+        "sri lankan leopard",
+        "sri lanka leopard",
+        "leopard",
+        "ceylon leopard",
+        "panthera pardus kotiya",
+        "panthera pardus",
+        "kotiya",
+        "kotiyaa",
+        "diviya",
+        "wild cat",
+        "big cat",
+        "apex predator",
+        "carnivore",
+        "spotted cat",
+        "rosettes",
+        "spotted fur",
+        "rosette pattern",
+        "deer",
+        "sambar",
+        "wild boar",
+        "predator",
+        "forest",
+        "yala",
+        "wilpattu",
+        "sinharaja",
+        "central highlands",
+        "vulnerable",
+        "vu",
+        "endemic subspecies",
+        "wire snare",
+        "human wildlife conflict",
+        "conservation",
+        "ශ්‍රී ලංකා කොටියා",
+        "කොටියා",
+        "දිවියා",
+        "කොටි",
+        "සත්තු",
+        "වනජීවී",
+        "ඉරියව්",
+        "இலங்கைச் சிறுத்தை",
+        "சிறுத்தை"
+      ],
+      "media": {
+        "image_asset_key": "leopard",
+        "model_asset_key": null,
+        "image_credit": null,
+        "alt_text": "Sri Lankan leopard with golden rosette-patterned coat in natural habitat"
+      },
+      "sources": [
+        {
+          "title": "IUCN Red List — Panthera pardus ssp. kotiya",
+          "publisher": "IUCN",
+          "year": 2020,
+          "url": "https://doi.org/10.2305/IUCN.UK.2020-2.RLTS.T15959A50660847.en",
+          "supports": "Taxonomy, endemic range, conservation category and threats"
+        },
+        {
+          "title": "IUCN Red List — Panthera pardus (2025 amended assessment)",
+          "publisher": "IUCN",
+          "year": 2025,
+          "url": "https://doi.org/10.2305/IUCN.UK.2025-1.RLTS.T15954A274970607.en",
+          "supports": "Parent-species context and subspecies comparison"
+        },
+        {
+          "title": "Ecological Assessment on the Wet Zone Leopard of Sri Lanka",
+          "publisher": "Wildlife Conservation Society - Galle",
+          "year": null,
+          "url": "https://wildlife.lk/services/wet-zone-leopard-conservation-project/",
+          "supports": "Wet-zone habitat, camera-trap research and human-leopard conflict"
+        }
+      ]
+    },
+    {
+      "id": "purple-faced-langur",
+      "slug": "purple-faced-langur",
+      "asset_key": "langur",
+      "featured": true,
+      "name": {
+        "en": "Purple-faced Langur",
+        "si": "කළු වඳුරා",
+        "ta": "ஊதா முகக் குரங்கு",
+        "alternate_names": [
+          "Purple-faced Leaf Monkey",
+          "Sri Lankan Purple-faced Langur",
+          "Sri Lanka Black Monkey",
+          "Kalu Wandura",
+          "Kalu Vandura",
+          "Western Purple-faced Langur (subspecies group)"
+        ]
+      },
+      "taxonomy": {
+        "scientific_name": "Semnopithecus vetulus",
+        "former_scientific_name": "Trachypithecus vetulus",
+        "taxonomic_rank": "Species",
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Primates",
+        "family": "Cercopithecidae",
+        "genus": "Semnopithecus",
+        "species": "Semnopithecus vetulus",
+        "recognized_subspecies": [
+          "S. v. vetulus",
+          "S. v. monticola",
+          "S. v. nestor",
+          "S. v. philbricki"
+        ]
+      },
+      "overview": {
+        "short": "An endangered, tree-dwelling leaf monkey found only in Sri Lanka, recognized by its dark face, pale facial fur and loud territorial calls.",
+        "detailed": "The purple-faced langur is a highly arboreal Old World monkey endemic to Sri Lanka. It is especially associated with forest canopies in the wet zone, intermediate landscapes and highlands, although recognized geographic forms also occur in other parts of the island. Its specialized digestive system helps it process a leaf-rich diet. Forest clearance, fragmented tree cover and conflict in settlements have caused serious conservation problems.",
+        "museum_story": "Listen above the canopy: a series of powerful whooping calls often announces a purple-faced langur group before visitors can see it. These calls help neighboring groups communicate territorial boundaries. A continuous roof of branches acts as the monkey's pathway, making broken forest connections a major threat."
+      },
+      "physical_description": {
+        "appearance": "A long-tailed monkey with dark brown to charcoal or greyish fur, a blackish or purplish-dark face and lighter cheek or beard-like facial hair. The body and fur shades vary among subspecies and ages.",
+        "features": [
+          "Prominent pale sideburns or cheek fur frame a dark face.",
+          "The tail is long and aids balance while moving between branches.",
+          "Strong grasping hands and feet support life high in trees.",
+          "Hair colour and size differ across the island's recognized subspecies.",
+          "Males tend to be larger than females."
+        ],
+        "approximate_head_body_length_cm": {
+          "male": "50–67",
+          "female": "45–60"
+        },
+        "size_source_note": "Rounded values taken from Sri Lanka's Department of Wildlife Conservation; variation exists between populations."
+      },
+      "habitat": {
+        "is_endemic_to_sri_lanka": true,
+        "range_countries": [
+          "Sri Lanka"
+        ],
+        "habitat_types": [
+          "Lowland wet-zone rainforest",
+          "Montane and cloud forest",
+          "Intermediate-zone woodland",
+          "Fragmented forest patches",
+          "Tree-rich home gardens and plantations in some areas"
+        ],
+        "distribution_summary": "Endemic to Sri Lanka, with populations in western and southern wet-zone forests, highlands and other suitable forested regions. The geographic subspecies occupy different parts of the island; not every dry-zone forest contains this species.",
+        "illustrative_places": [
+          "Sinharaja Forest Reserve landscape",
+          "Western wet zone",
+          "Central highland forests",
+          "Forest patches near Colombo"
+        ],
+        "movement_and_shelter": "Typically moves through the upper tree canopy. Groups may cross ground gaps or infrastructure when tree cover has been broken, increasing danger.",
+        "place_note": "Broad habitat examples only; sightings are not guaranteed."
+      },
+      "diet": {
+        "type": "Primarily folivorous herbivore",
+        "primary_foods": [
+          "Leaves and young leaf shoots",
+          "Fruits",
+          "Flowers",
+          "Seeds"
+        ],
+        "other_foods": [
+          "Cultivated fruits in some fragmented habitats, including jackfruit and mango"
+        ],
+        "feeding_adaptations": [
+          "Specialized multi-chambered forestomach and microbial digestion help process fibrous leaves",
+          "Selects plant foods differently according to season, habitat and availability"
+        ],
+        "feeding_note": "A leaf-rich forest diet is typical; the proportion of fruit varies by habitat and degree of human modification."
+      },
+      "behavior": {
+        "activity": "Diurnal (mainly active during daylight).",
+        "social_structure": "Lives in social groups; a group often has a single adult male with females and young, though size and composition vary.",
+        "patterns": [
+          "Strongly arboreal and spends much of its life among tree branches.",
+          "Produces loud whoops and other calls that advertise and defend territory.",
+          "Morning calls can be especially conspicuous between neighboring groups.",
+          "Grooms group members and maintains social relationships.",
+          "Moves through trees to feed, rest and avoid danger on the ground.",
+          "Can enter gardens and farms when natural habitat has been reduced."
+        ],
+        "communication": [
+          "Territorial whoops",
+          "Barks and social calls",
+          "Body postures",
+          "Social grooming"
+        ]
+      },
+      "reproduction": {
+        "breeding": "Reproduction and birth timing vary by population and environmental conditions.",
+        "offspring": "Usually one infant per birth.",
+        "care": "Infants cling to their mothers and depend on maternal care while developing their ability to travel and feed independently.",
+        "research_note": "Do not infer a precise population-specific breeding rate from general primate descriptions."
+      },
+      "ecological_importance": {
+        "roles": [
+          "Part of forest plant–herbivore relationships",
+          "Possible seed dispersal for consumed fruits",
+          "Contributes to forest food webs",
+          "Indicator of functional canopy connectivity"
+        ],
+        "explanation": "Langurs consume plant material and may move seeds through the landscape. Their dependence on trees illustrates why mature forest and connected canopy matter for biodiversity."
+      },
+      "conservation": {
+        "iucn_category": "Endangered",
+        "iucn_code": "EN",
+        "assessment_scope": "Species: Semnopithecus vetulus",
+        "assessment_year": 2020,
+        "assessment_date_note": "Published 2020 from an assessment conducted in 2015; IUCN notes that reassessment is needed.",
+        "population_trend": "Decreasing",
+        "legal_note": "The species appears among protected species documented by Sri Lanka's Department of Wildlife Conservation.",
+        "threats": [
+          "Deforestation",
+          "Loss and fragmentation of continuous canopy",
+          "Urban expansion and new roads",
+          "Electrocution on overhead electrical lines",
+          "Vehicle collisions",
+          "Dog attacks",
+          "Human-monkey conflict",
+          "Occasional hunting"
+        ],
+        "conservation_actions": [
+          "Protect remaining wet-zone and highland forest",
+          "Restore native tree cover and canopy corridors",
+          "Plan wildlife-safe crossings and mitigate dangerous power lines",
+          "Reduce retaliatory harm through community-based conflict management",
+          "Support systematic population research and awareness"
+        ],
+        "visitor_actions": [
+          "Do not feed wild monkeys",
+          "Avoid approaching infants",
+          "Do not chase or corner monkey groups",
+          "Support the protection of connected trees and native forests"
+        ]
+      },
+      "facts": [
+        "The purple-faced langur occurs naturally only in Sri Lanka.",
+        "It is not the same species as the toque macaque or the grey langur.",
+        "The older scientific combination Trachypithecus vetulus is still encountered in some publications.",
+        "Four subspecies are commonly recognized in the IUCN account.",
+        "Its loud whooping territorial calls can travel through forested valleys.",
+        "The animal can digest large amounts of fibrous leaves thanks to a specialized gut.",
+        "A broken tree canopy can force it toward roads, ground travel and electrical lines."
+      ],
+      "faq": [
+        {
+          "question": "Is the purple-faced langur found only in Sri Lanka?",
+          "answer": "Yes. It is a Sri Lankan endemic monkey."
+        },
+        {
+          "question": "Is it a macaque?",
+          "answer": "No. It is a langur, a leaf-eating Old World monkey distinct from the toque macaque."
+        },
+        {
+          "question": "Why is it called purple-faced?",
+          "answer": "Its dark face may appear purplish-black, contrasting with lighter facial hair."
+        },
+        {
+          "question": "What does it eat?",
+          "answer": "Primarily leaves, along with fruits, flowers and seeds."
+        },
+        {
+          "question": "Does it live in trees?",
+          "answer": "Yes. It is strongly arboreal and depends on connected forest canopies."
+        },
+        {
+          "question": "Why are its calls loud?",
+          "answer": "Whooping and barking calls serve communication and territorial defense."
+        },
+        {
+          "question": "What threatens this species?",
+          "answer": "Forest fragmentation, development, electrical lines, roads and human-wildlife conflict."
+        },
+        {
+          "question": "What is its IUCN category?",
+          "answer": "Endangered (EN) under the IUCN account published in 2020."
+        }
+      ],
+      "search_terms": [
+        "purple faced langur",
+        "purple-faced langur",
+        "purple face monkey",
+        "purple-faced leaf monkey",
+        "leaf monkey",
+        "leaf eating monkey",
+        "black monkey",
+        "kalu wandura",
+        "kalu vandura",
+        "semnopithecus vetulus",
+        "trachypithecus vetulus",
+        "primate",
+        "monkey",
+        "langur",
+        "arboreal",
+        "canopy",
+        "whooping call",
+        "territorial call",
+        "rainforest",
+        "wet zone",
+        "highland",
+        "montane",
+        "folivore",
+        "leaves",
+        "fruits",
+        "forest fragmentation",
+        "power line",
+        "electrocution",
+        "endangered",
+        "en",
+        "endemic",
+        "ශ්‍රී ලංකා කළු වඳුරා",
+        "කළු වඳුරා",
+        "වඳුරා",
+        "වඳුරන්",
+        "කැලෑව",
+        "කොළ",
+        "வானரம்",
+        "குரங்கு",
+        "ஊதா முகக் குரங்கு"
+      ],
+      "media": {
+        "image_asset_key": "langur",
+        "model_asset_key": null,
+        "image_credit": null,
+        "alt_text": "Purple-faced langur with dark face and pale cheek hair resting in a tree"
+      },
+      "sources": [
+        {
+          "title": "IUCN Red List — Semnopithecus vetulus",
+          "publisher": "IUCN",
+          "year": 2020,
+          "url": "https://doi.org/10.2305/IUCN.UK.2020-2.RLTS.T22042A17959452.en",
+          "supports": "Global Endangered status, range, subspecies and conservation threats"
+        },
+        {
+          "title": "Protected Species — Purple Faced Langur",
+          "publisher": "Sri Lanka Department of Wildlife Conservation",
+          "year": null,
+          "url": "https://www.dwc.gov.lk/?page_id=96",
+          "supports": "Physical description, diet, calls and local conservation context"
+        },
+        {
+          "title": "Primates of Sri Lanka",
+          "publisher": "Primate Center Sri Lanka",
+          "year": null,
+          "url": "https://www.primates.lk/primates/",
+          "supports": "Forest canopy ecology, calls and specialized leaf digestion"
+        }
+      ]
+    },
+    {
+      "id": "indian-pangolin",
+      "slug": "indian-pangolin",
+      "asset_key": "pangolin",
+      "featured": true,
+      "name": {
+        "en": "Indian Pangolin",
+        "si": "කබල්ලෑවා",
+        "ta": "இந்திய எறும்புண்ணி",
+        "alternate_names": [
+          "Sri Lankan Pangolin (informal name for local population)",
+          "Thick-tailed Pangolin",
+          "Pangolin",
+          "Kaballawa",
+          "Kaballewa",
+          "Kaballaaewa",
+          "Eya",
+          "Scaly Anteater"
+        ]
+      },
+      "taxonomy": {
+        "scientific_name": "Manis crassicaudata",
+        "taxonomic_rank": "Species",
+        "kingdom": "Animalia",
+        "phylum": "Chordata",
+        "class": "Mammalia",
+        "order": "Pholidota",
+        "family": "Manidae",
+        "genus": "Manis",
+        "species": "Manis crassicaudata",
+        "authority": "É. Geoffroy, 1803"
+      },
+      "overview": {
+        "short": "Sri Lanka's only native pangolin species: a shy, predominantly nocturnal insect-eating mammal protected by overlapping keratin scales.",
+        "detailed": "The Indian pangolin is the only pangolin species recorded from Sri Lanka and also occurs elsewhere in South Asia. It spends much of its life alone, sheltering in burrows and searching for ants and termites. Strong digging claws, an elongated sticky tongue and overlapping keratin scales are distinctive adaptations. Its scales help deter predators but have made pangolins targets of illegal wildlife trade. Habitat loss and hunting threaten its survival.",
+        "museum_story": "At night, a quiet animal walks low to the ground, guided mostly by smell. It tears into an ant nest using powerful claws and collects tiny insects with a long sticky tongue. When frightened, it curls into a tight armored ball. That remarkable defense is less effective against human poaching, making awareness and protection essential."
+      },
+      "physical_description": {
+        "appearance": "A long-bodied mammal with a narrow, cone-shaped head, thick tapering tail, small eyes, powerful forelimbs and overlapping yellow-brown to brown scales. Unlike reptiles, a pangolin is a mammal whose scales are made of keratin.",
+        "features": [
+          "Overlapping hard keratin scales protect much of the body.",
+          "The soft underside is shielded when the animal curls into a ball.",
+          "Enlarged curved front claws break open ant and termite nests and excavate burrows.",
+          "An exceptionally long sticky tongue gathers insects.",
+          "A strong sense of smell helps locate prey.",
+          "Its thick tail supports balance and may help when climbing."
+        ],
+        "size_note": "Adult size varies widely; regional research reports roughly 10–20 kg for some adults, but this should not be read as a strict range for every Sri Lankan individual."
+      },
+      "habitat": {
+        "is_endemic_to_sri_lanka": false,
+        "range_countries": [
+          "Sri Lanka",
+          "India",
+          "Pakistan",
+          "Nepal",
+          "Bangladesh"
+        ],
+        "habitat_types": [
+          "Tropical forest",
+          "Scrubland",
+          "Grassland",
+          "Dry forest",
+          "Cultivated landscapes near natural cover",
+          "Other habitats where ants and termites are accessible"
+        ],
+        "distribution_summary": "The Indian pangolin occurs in several South Asian countries, including Sri Lanka. On the island it has been reported from multiple climatic regions and habitat types, but evidence remains uneven and it is difficult to detect reliably.",
+        "illustrative_places": [
+          "Lowland forest-associated landscapes of southwest Sri Lanka",
+          "Suitable forests and scrublands across Sri Lanka",
+          "Human-modified landscapes with suitable prey and shelter"
+        ],
+        "movement_and_shelter": "Usually rests in concealed burrows during daylight and emerges after dark to forage. It can dig feeding pits and deeper resting shelters.",
+        "place_note": "Exact den coordinates and active burrow locations are deliberately excluded to reduce disturbance and poaching risk."
+      },
+      "diet": {
+        "type": "Specialist insectivore (myrmecophage)",
+        "primary_foods": [
+          "Ants",
+          "Termites",
+          "Their eggs, larvae and other immature stages"
+        ],
+        "other_foods": [
+          "Additional social insects when encountered; exact prey preferences vary by location"
+        ],
+        "feeding_adaptations": [
+          "Finds insect colonies with its sensitive sense of smell.",
+          "Uses strong foreclaws to open nests or termite mounds.",
+          "Collects ants and termites with a long adhesive tongue.",
+          "Has no teeth and processes insect prey using muscular digestive anatomy."
+        ],
+        "feeding_note": "Field studies in Sri Lanka document ant- and termite-based diets. Pangolins do not hunt deer, fish or other large animals."
+      },
+      "behavior": {
+        "activity": "Predominantly nocturnal.",
+        "social_structure": "Generally solitary, with temporary associations related to breeding and maternal care.",
+        "patterns": [
+          "Spends daylight hours concealed in burrows or other secure shelters.",
+          "Uses smell more than keen eyesight while searching for food.",
+          "Rolls into a tight defensive ball when threatened.",
+          "Excavates feeding holes and resting burrows using powerful claws.",
+          "Can climb, although it is primarily terrestrial.",
+          "Avoids confrontation; reports of aggressiveness should not be generalized to the species."
+        ],
+        "communication": [
+          "Scent cues",
+          "Physical contact during mating and maternal care"
+        ]
+      },
+      "reproduction": {
+        "breeding": "Breeding biology in the wild is incompletely documented and may vary geographically.",
+        "offspring": "Typically a single young is reported, although biological details remain insufficiently studied.",
+        "care": "Young pangolins receive maternal protection and may ride on the mother's back or tail during early development.",
+        "research_note": "Avoid inventing exact mating seasons, gestation days or breeding rates for Sri Lankan populations."
+      },
+      "ecological_importance": {
+        "roles": [
+          "Consumes social insects",
+          "Creates burrows and soil disturbance through digging",
+          "Participates in soil and nutrient cycling",
+          "Part of forest and grassland biodiversity"
+        ],
+        "explanation": "Foraging on ants and termites and digging through soil are ecological processes. Pangolin burrows and feeding sites can influence local soil conditions and may create resources later used by other organisms."
+      },
+      "conservation": {
+        "iucn_category": "Endangered",
+        "iucn_code": "EN",
+        "assessment_scope": "Species: Manis crassicaudata",
+        "assessment_year": 2019,
+        "population_trend": "Decreasing",
+        "cites_listing": "Appendix I",
+        "legal_note": "The Indian pangolin is protected under Sri Lankan wildlife law. Illegal capture, killing or trafficking should be reported to authorities.",
+        "threats": [
+          "Illegal hunting and trapping",
+          "Wildlife trafficking for scales",
+          "Killing for meat",
+          "Habitat destruction and fragmentation",
+          "Accidental injury and conflict in human-modified landscapes",
+          "Low detection rates that hinder monitoring"
+        ],
+        "conservation_actions": [
+          "Enforce wildlife protection laws and anti-trafficking measures",
+          "Reduce demand for pangolin scales and other wildlife products",
+          "Protect diverse habitats and burrow shelter",
+          "Expand non-invasive field monitoring and ecological research",
+          "Support local community awareness and prompt expert wildlife rescue"
+        ],
+        "visitor_actions": [
+          "Never buy pangolin meat, scales or products",
+          "Do not open or enter animal burrows",
+          "Keep observations and den locations private",
+          "Report suspected wildlife trafficking through official channels"
+        ]
+      },
+      "facts": [
+        "There is only one pangolin species native to Sri Lanka: Manis crassicaudata.",
+        "Indian pangolins are not endemic to Sri Lanka; they also occur in other South Asian countries.",
+        "Although pangolins have scales, they are mammals, not reptiles.",
+        "Their protective scales consist of keratin, a structural protein also present in human fingernails.",
+        "Pangolins are largely toothless insect specialists.",
+        "They are more often active after dark than in daylight.",
+        "Curling into a ball helps resist natural predators but makes capture by humans easier.",
+        "The IUCN species-level status is Endangered; this is different from any older national assessment."
+      ],
+      "faq": [
+        {
+          "question": "What is Sri Lanka's pangolin called?",
+          "answer": "The species is Indian pangolin (Manis crassicaudata), commonly known as කබල්ලෑවා in Sinhala."
+        },
+        {
+          "question": "Is it found only in Sri Lanka?",
+          "answer": "No. It also occurs in countries including India, Pakistan, Nepal and Bangladesh."
+        },
+        {
+          "question": "Is a pangolin a reptile?",
+          "answer": "No. Pangolins are mammals with protective keratin scales."
+        },
+        {
+          "question": "What does a pangolin eat?",
+          "answer": "Primarily ants and termites, collected with a long sticky tongue."
+        },
+        {
+          "question": "Why does it roll into a ball?",
+          "answer": "Curling up protects its soft underside with hard outer scales."
+        },
+        {
+          "question": "Where does it sleep?",
+          "answer": "It commonly shelters in a burrow during the daytime."
+        },
+        {
+          "question": "Why is it endangered?",
+          "answer": "Hunting, trafficking, especially for scales, and habitat loss are major threats."
+        },
+        {
+          "question": "How can I help protect it?",
+          "answer": "Do not purchase wildlife products; protect habitats and report trafficking or injured wildlife to appropriate authorities."
+        }
+      ],
+      "search_terms": [
+        "indian pangolin",
+        "sri lankan pangolin",
+        "sri lanka pangolin",
+        "pangolin",
+        "thick tailed pangolin",
+        "thick-tailed pangolin",
+        "manis crassicaudata",
+        "kaballawa",
+        "kaballewa",
+        "kaballaaewa",
+        "kaballava",
+        "eya",
+        "scaly anteater",
+        "scale",
+        "scales",
+        "armor",
+        "armoured mammal",
+        "armored mammal",
+        "keratin",
+        "ant eater",
+        "anteater",
+        "ant",
+        "ants",
+        "termite",
+        "termites",
+        "sticky tongue",
+        "no teeth",
+        "digging",
+        "burrow",
+        "nocturnal",
+        "insectivore",
+        "endangered",
+        "en",
+        "wildlife trafficking",
+        "poaching",
+        "cites",
+        "mammal",
+        "කබල්ලෑවා",
+        "කබල්ලැවා",
+        "ඈයා",
+        "කබල්ලෑව",
+        "කූඹියා",
+        "වේයා",
+        "எறும்புண்ணி",
+        "இந்திய எறும்புண்ணி"
+      ],
+      "media": {
+        "image_asset_key": "pangolin",
+        "model_asset_key": null,
+        "image_credit": null,
+        "alt_text": "Indian pangolin with overlapping scales and long tail in its natural habitat"
+      },
+      "sources": [
+        {
+          "title": "IUCN Red List — Manis crassicaudata",
+          "publisher": "IUCN",
+          "year": 2019,
+          "url": "https://doi.org/10.2305/IUCN.UK.2019-3.RLTS.T12761A123583998.en",
+          "supports": "Endangered status, distribution, nocturnal habits and major threats"
+        },
+        {
+          "title": "Protected Species — Pangolin",
+          "publisher": "Sri Lanka Department of Wildlife Conservation",
+          "year": null,
+          "url": "https://www.dwc.gov.lk/?page_id=96",
+          "supports": "Appearance, foraging behavior, defense and local occurrence"
+        },
+        {
+          "title": "Dataset of distribution, habitats and conservation status of the Indian pangolin in Sri Lanka",
+          "publisher": "Data in Brief / University of Sri Jayewardenepura",
+          "year": 2020,
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6939095/",
+          "supports": "Only pangolin species in Sri Lanka and local research context"
+        },
+        {
+          "title": "Habitat preference and den characterization of Indian Pangolin in southwest Sri Lanka",
+          "publisher": "PLOS ONE",
+          "year": 2018,
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6221306/",
+          "supports": "Local habitat use, burrows and Sri Lankan wildlife protection"
+        }
+      ]
+    }
+  ]
+}

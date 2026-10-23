@@ -1,0 +1,63 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native & Android build artifacts
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+android/.gradle/
+android/build/
+android/app/build/
+gradle_cache/
+temp/
+
+# Metro & debug
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS & OS
+.DS_Store
+*.pem
+Thumbs.db
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# IDE & agent artifacts
+.vscode/
+.claude/
+CLAUDE.md
+
+# Archives & build packages
+*.apk
+*.aab
+*.zip
+*.rar
+*.tar.gz
+
+# Temporary model/data folders
+/*.glb
+3D-models/
+3D Models/
+New 3D Models/
+Final 3D Models/
+Pangolin/
+Echoes-of-the-Wild-updated/
+animals (*).json
