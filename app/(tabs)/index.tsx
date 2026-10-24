@@ -74,9 +74,9 @@ export default function HomeScreen() {
 
       {/* ── Quick actions ─────────────────────────────────────────────────── */}
       <View style={styles.actionsRow}>
-        <IconPillButton label="Scan QR" icon={Scan} onPress={() => router.push('/scanner')} />
+        <IconPillButton label="Scan Exhibit" icon={Scan} onPress={() => router.push('/scanner')} />
         <IconPillButton label="Explore" icon={Compass} onPress={() => router.navigate('/(tabs)/species')} />
-        <IconPillButton label="Interactive AR" icon={Box} onPress={() => router.push('/scanner')} />
+        <IconPillButton label="Visual AR" icon={Box} onPress={() => router.push('/scanner')} />
       </View>
 
       {/* ── Featured / Search results ─────────────────────────────────────── */}

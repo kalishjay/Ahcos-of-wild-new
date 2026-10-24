@@ -133,17 +133,7 @@ export default function ViewerScreen() {
   };
 
   const handleLaunchARCore = () => {
-    Alert.alert(
-      '🌟 Place on Floor / Table',
-      `To view ${species.commonName} anchored in real life:\n\n1. Select "Google Play Services for AR"\n2. Check "Remember my choice"\n3. Point your camera at the floor or table to place the animal!`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Continue',
-          onPress: () => launchTrueAR(species.id, species.commonName),
-        },
-      ]
-    );
+    launchTrueAR(species.id, species.commonName);
   };
 
   const isCameraActive = isAR && Boolean(permission?.granted) && cameraReady;

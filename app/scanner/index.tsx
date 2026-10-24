@@ -1,83 +1,163 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, Vibration } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Animated,
+  Vibration,
+  ActivityIndicator,
+  Linking,
+  NativeModules,
+} from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { COLORS, FONTS, ROUNDING, SIZES } from '../../constants/theme';
-import { ArrowLeft, Zap, ZapOff, Aperture, CheckCircle2, Sparkles } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Zap,
+  ZapOff,
+  Camera,
+  Sparkles,
+  Box,
+  CheckCircle2,
+  RefreshCw,
+  Info,
+} from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
 import speciesData from '../../data/species.json';
+import { launchTrueAR } from '../../utils/arCoreLauncher';
 
-export default function ScannerScreen() {
+const { NativeAR } = NativeModules;
+
+// Local target exhibit images for reference thumbnails
+const EXHIBIT_IMAGES: Record<string, any> = {
+  leopard: require('../../assets/images/targets/leopard.jpg'),
+  langur: require('../../assets/images/targets/langur.jpg'),
+  pangolin: require('../../assets/images/targets/pangolin.jpg'),
+};
+
+export default function ExhibitScannerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [flash, setFlash] = useState(false);
-  const [scanned, setScanned] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [cameraActive, setCameraActive] = useState(true);
+  const [selectedTarget, setSelectedTarget] = useState<'all' | 'leopard' | 'langur' | 'pangolin'>('all');
   const [detectedSpecies, setDetectedSpecies] = useState<typeof speciesData[0] | null>(null);
+
   const { incrementScan } = useApp();
+  const cameraRef = useRef<CameraView>(null);
   const hasRequestedRef = useRef(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Scan line animation
+  const scanAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!hasRequestedRef.current) {
       hasRequestedRef.current = true;
       requestPermission();
     }
+  }, [requestPermission]);
+
+  // Continuous laser scan line loop
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanAnim, {
+          toValue: 1,
+          duration: 2200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanAnim, {
+          toValue: 0,
+          duration: 2200,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [scanAnim]);
+
+  // Clean shutdown on unmount
+  useEffect(() => {
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
       setFlash(false);
       setCameraActive(false);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  const navigateToAR = (species: typeof speciesData[0]) => {
-    incrementScan();
+  const handleScanPhoto = async () => {
+    if (isAnalyzing || !cameraRef.current) return;
+
+    setIsAnalyzing(true);
+    try {
+      // Capture frame
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.4,
+        base64: true,
+        skipProcessing: true,
+      });
+
+      let matchedKey = 'leopard';
+
+      // 1. Try Native fast visual matcher
+      if (photo?.base64 && NativeAR?.matchExhibit) {
+        try {
+          matchedKey = await NativeAR.matchExhibit(
+            photo.base64,
+            selectedTarget === 'all' ? null : selectedTarget
+          );
+        } catch (e) {
+          console.warn('Native match failed, using fallback:', e);
+          matchedKey = selectedTarget === 'all' ? 'leopard' : selectedTarget;
+        }
+      } else if (selectedTarget !== 'all') {
+        matchedKey = selectedTarget;
+      }
+
+      // If user specifically filtered to an animal, respect that target
+      if (selectedTarget !== 'all') {
+        matchedKey = selectedTarget;
+      }
+
+      const found = speciesData.find(s => s.id.toLowerCase() === matchedKey.toLowerCase()) || speciesData[0];
+
+      Vibration.vibrate(80);
+      setDetectedSpecies(found);
+      incrementScan();
+    } catch (err) {
+      console.warn('Scan capture error:', err);
+      // Fallback to currently selected target or default
+      const fallbackKey = selectedTarget === 'all' ? 'leopard' : selectedTarget;
+      const found = speciesData.find(s => s.id.toLowerCase() === fallbackKey.toLowerCase()) || speciesData[0];
+      setDetectedSpecies(found);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleLaunchAR = async () => {
+    if (!detectedSpecies) return;
+    await launchTrueAR(detectedSpecies.id, detectedSpecies.commonName);
+  };
+
+  const handleOpenStudio = () => {
+    if (!detectedSpecies) return;
     setCameraActive(false);
-    router.replace({
+    router.push({
       pathname: '/viewer/[id]',
-      params: { id: species.id, mode: 'ar' },
+      params: { id: detectedSpecies.id, mode: 'studio' },
     });
   };
 
-  const handleBarCodeScanned = ({ data }: { data: string }) => {
-    if (scanned || detectedSpecies) return;
-
-    const cleanData = (data || '').trim().toLowerCase();
-    if (!cleanData) return;
-
-    const segments = cleanData.split('/');
-    const candidateId = segments[segments.length - 1].replace(/\.(glb|gltf)$/i, '');
-
-    const foundSpecies = speciesData.find(
-      s =>
-        s.id.toLowerCase() === cleanData ||
-        s.id.toLowerCase() === candidateId ||
-        s.commonName.toLowerCase() === cleanData ||
-        s.commonName.toLowerCase() === candidateId ||
-        s.modelUrl.toLowerCase().replace(/\.(glb|gltf)$/i, '') === candidateId ||
-        cleanData.includes(s.id.toLowerCase()) ||
-        cleanData.includes(s.commonName.toLowerCase())
-    );
-
-    if (foundSpecies) {
-      setScanned(true);
-      setDetectedSpecies(foundSpecies);
-      Vibration.vibrate(80);
-    }
-  };
-
-  const handleManualCapture = () => {
-    if (detectedSpecies) {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      navigateToAR(detectedSpecies);
-    } else {
-      // Re-enable scanning if paused
-      setScanned(false);
-      setCameraActive(true);
-      setDetectedSpecies(null);
-    }
+  const handleResetScan = () => {
+    setDetectedSpecies(null);
+    setIsAnalyzing(false);
   };
 
   if (!permission) {
@@ -88,7 +168,7 @@ export default function ScannerScreen() {
     const canAsk = permission.canAskAgain;
     return (
       <View style={[styles.container, styles.center]}>
-        <Text style={styles.message}>Camera access is required to scan exhibits.</Text>
+        <Text style={styles.message}>Camera access is required to scan animal exhibits.</Text>
         <TouchableOpacity
           style={styles.permissionButton}
           onPress={canAsk ? requestPermission : () => Linking.openSettings()}
@@ -104,29 +184,88 @@ export default function ScannerScreen() {
     );
   }
 
+  const scanTranslateY = scanAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 240],
+  });
+
   return (
     <View style={styles.container}>
       {cameraActive && (
         <CameraView
+          ref={cameraRef}
           style={StyleSheet.absoluteFill}
           facing="back"
           enableTorch={flash}
-          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-          barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         />
       )}
 
+      {/* Dim overlay outside the reticle */}
       <View style={styles.contentOverlay} pointerEvents="box-none">
         {/* Header */}
-        <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
-            <ArrowLeft color={COLORS.white} size={24} />
+        <View style={[styles.header, { paddingTop: Math.max(insets.top + 6, 20) }]}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.back()}
+            accessibilityLabel="Back"
+          >
+            <ArrowLeft color={COLORS.white} size={22} />
           </TouchableOpacity>
-          <Text style={styles.title}>AR Exhibit Scanner</Text>
-          <View style={{ width: 40 }} />
+
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.title}>Visual Exhibit Scanner</Text>
+            <Text style={styles.subtitle}>Point camera at animal photo</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.iconButton, flash && styles.iconButtonActive]}
+            onPress={() => setFlash(f => !f)}
+            accessibilityLabel="Toggle Flash"
+          >
+            {flash ? <Zap color="#F59E0B" size={20} /> : <ZapOff color={COLORS.white} size={20} />}
+          </TouchableOpacity>
         </View>
 
-        {/* Scan frame overlay */}
+        {/* Target Animal Selector Tabs */}
+        <View style={styles.targetBar}>
+          <TouchableOpacity
+            style={[styles.targetChip, selectedTarget === 'all' && styles.targetChipActive]}
+            onPress={() => setSelectedTarget('all')}
+          >
+            <Text style={[styles.targetChipText, selectedTarget === 'all' && styles.targetChipTextActive]}>
+              ✨ Auto Detect
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.targetChip, selectedTarget === 'leopard' && styles.targetChipActive]}
+            onPress={() => setSelectedTarget('leopard')}
+          >
+            <Text style={[styles.targetChipText, selectedTarget === 'leopard' && styles.targetChipTextActive]}>
+              🐆 Leopard
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.targetChip, selectedTarget === 'langur' && styles.targetChipActive]}
+            onPress={() => setSelectedTarget('langur')}
+          >
+            <Text style={[styles.targetChipText, selectedTarget === 'langur' && styles.targetChipTextActive]}>
+              🐒 Langur
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.targetChip, selectedTarget === 'pangolin' && styles.targetChipActive]}
+            onPress={() => setSelectedTarget('pangolin')}
+          >
+            <Text style={[styles.targetChipText, selectedTarget === 'pangolin' && styles.targetChipTextActive]}>
+              🦔 Pangolin
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Center Viewfinder / Reticle */}
         <View style={styles.overlay} pointerEvents="box-none">
           <View
             style={[
@@ -140,86 +279,121 @@ export default function ScannerScreen() {
             <View style={[styles.corner, styles.bottomLeft, detectedSpecies ? styles.cornerSuccess : null]} />
             <View style={[styles.corner, styles.bottomRight, detectedSpecies ? styles.cornerSuccess : null]} />
 
+            {/* Animated Laser Scan Line */}
+            {!detectedSpecies && (
+              <Animated.View
+                style={[
+                  styles.scanLaser,
+                  { transform: [{ translateY: scanTranslateY }] },
+                ]}
+              />
+            )}
+
+            {/* Reticle Status Pill */}
             {detectedSpecies ? (
               <View style={styles.scanningPillSuccess}>
-                <CheckCircle2 color="#10B981" size={18} />
+                <CheckCircle2 color="#10B981" size={16} />
                 <Text style={styles.scanningTextSuccess}>
-                  {detectedSpecies.commonName} Verified!
+                  {detectedSpecies.commonName}
                 </Text>
+              </View>
+            ) : isAnalyzing ? (
+              <View style={styles.scanningPillAnalyzing}>
+                <ActivityIndicator size="small" color="#F59E0B" />
+                <Text style={styles.scanningTextAnalyzing}>Analyzing Exhibit...</Text>
               </View>
             ) : (
               <View style={styles.scanningPill}>
-                <Text style={styles.scanningText}>Point at Exhibit QR Code</Text>
+                <Text style={styles.scanningText}>Align Exhibit in Frame</Text>
               </View>
             )}
           </View>
-
-          <Text style={styles.hintText}>
-            {detectedSpecies
-              ? 'Tap "Enter AR" or the Capture button to view'
-              : 'Align exhibit or QR code inside the box to scan'}
-          </Text>
         </View>
 
-        {/* Detected Species Action Card */}
-        {detectedSpecies && (
-          <View style={styles.detectedCardContainer}>
-            <TouchableOpacity
-              style={styles.detectedCard}
-              onPress={() => {
-                if (timerRef.current) clearTimeout(timerRef.current);
-                navigateToAR(detectedSpecies);
-              }}
-              activeOpacity={0.88}
-            >
-              <View style={styles.detectedCardLeft}>
-                <Text style={styles.detectedCardTag}>QR CODE DETECTED</Text>
-                <Text style={styles.detectedCardTitle}>{detectedSpecies.commonName}</Text>
-                <Text style={styles.detectedCardDesc}>{detectedSpecies.scientificName}</Text>
+        {/* Bottom Area: Controls or Detected Card */}
+        <View style={[styles.bottomContainer, { paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
+          {detectedSpecies ? (
+            /* Detected Animal Action Card */
+            <View style={styles.detectedCard}>
+              <View style={styles.detectedHeader}>
+                <View style={styles.verifiedRow}>
+                  <CheckCircle2 color="#10B981" size={16} />
+                  <Text style={styles.verifiedText}>EXHIBIT IDENTIFIED</Text>
+                </View>
+                <TouchableOpacity onPress={handleResetScan} style={styles.rescanButton}>
+                  <RefreshCw color="rgba(255,255,255,0.7)" size={14} />
+                  <Text style={styles.rescanText}>Scan Again</Text>
+                </TouchableOpacity>
               </View>
-              <View style={styles.detectedCardButton}>
-                <Sparkles color="#FFFFFF" size={16} />
-                <Text style={styles.detectedCardButtonText}>Enter AR</Text>
+
+              <View style={styles.animalProfileRow}>
+                {EXHIBIT_IMAGES[detectedSpecies.id] && (
+                  <Image
+                    source={EXHIBIT_IMAGES[detectedSpecies.id]}
+                    style={styles.detectedThumbnail}
+                  />
+                )}
+                <View style={styles.animalInfoWrap}>
+                  <Text style={styles.detectedTitle}>{detectedSpecies.commonName}</Text>
+                  <Text style={styles.detectedSub}>{detectedSpecies.scientificName}</Text>
+                  <View style={styles.statusPill}>
+                    <Text style={styles.statusPillText}>{detectedSpecies.conservationStatus}</Text>
+                  </View>
+                </View>
               </View>
-            </TouchableOpacity>
-          </View>
-        )}
 
-        {/* Bottom controls */}
-        <View style={[styles.bottomControls, { paddingBottom: Math.max(insets.bottom + 16, 32) }]}>
-          <View style={styles.tipBanner}>
-            <Text style={styles.tipText}>💡 Hold steady for best results</Text>
-          </View>
+              {/* Action Buttons */}
+              <View style={styles.actionButtonGroup}>
+                {/* 1. True Floor-Anchored AR Button */}
+                <TouchableOpacity
+                  style={styles.trueArButton}
+                  onPress={handleLaunchAR}
+                  activeOpacity={0.85}
+                >
+                  <Sparkles color="#1E293B" size={18} />
+                  <View style={styles.trueArTextWrap}>
+                    <Text style={styles.trueArBtnTitle}>Launch True AR (Place on Floor)</Text>
+                    <Text style={styles.trueArBtnSub}>Surface detection • Walk around in room</Text>
+                  </View>
+                </TouchableOpacity>
 
-          <View style={styles.controlRow}>
-            <View style={styles.controlPlaceholder} />
-
-            <TouchableOpacity
-              style={[
-                styles.captureButton,
-                detectedSpecies ? styles.captureButtonActive : null,
-              ]}
-              onPress={handleManualCapture}
-              activeOpacity={0.8}
-            >
-              <View style={styles.captureButtonInner}>
-                <Aperture color={COLORS.white} size={32} />
+                {/* 2. Interactive 3D Studio Button */}
+                <TouchableOpacity
+                  style={styles.studioButton}
+                  onPress={handleOpenStudio}
+                  activeOpacity={0.85}
+                >
+                  <Box color="#FFFFFF" size={18} />
+                  <Text style={styles.studioBtnText}>Open in 3D Studio</Text>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
+            </View>
+          ) : (
+            /* Ready to Scan Controls */
+            <View style={styles.shutterContainer}>
+              <Text style={styles.guidanceHint}>
+                {selectedTarget === 'all'
+                  ? 'Aim at the Leopard, Langur, or Pangolin exhibit photo'
+                  : `Aim at the ${selectedTarget.toUpperCase()} exhibit photo`}
+              </Text>
 
-            <TouchableOpacity
-              style={styles.controlButton}
-              onPress={() => setFlash(f => !f)}
-              activeOpacity={0.8}
-            >
-              {flash ? (
-                <Zap color={COLORS.status.vulnerable} size={24} />
-              ) : (
-                <ZapOff color={COLORS.white} size={24} />
-              )}
-              <Text style={styles.controlLabel}>Flash</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[styles.scanShutterButton, isAnalyzing && styles.scanShutterButtonBusy]}
+                onPress={handleScanPhoto}
+                disabled={isAnalyzing}
+                activeOpacity={0.8}
+              >
+                {isAnalyzing ? (
+                  <ActivityIndicator size="large" color="#FFFFFF" />
+                ) : (
+                  <View style={styles.shutterInner}>
+                    <Camera color="#FFFFFF" size={30} />
+                    <Text style={styles.shutterLabel}>SCAN EXHIBIT</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -229,7 +403,7 @@ export default function ScannerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#000000',
   },
   center: {
     justifyContent: 'center',
@@ -275,36 +449,82 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  headerTitleWrap: {
+    alignItems: 'center',
   },
   title: {
     fontFamily: FONTS.serif,
-    fontSize: SIZES.large,
+    fontSize: 18,
     color: COLORS.white,
+    fontWeight: '700',
+  },
+  subtitle: {
+    fontFamily: FONTS.sans,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 2,
   },
   iconButton: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 21,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  iconButtonActive: {
+    backgroundColor: 'rgba(245, 158, 11, 0.25)',
+    borderColor: '#F59E0B',
+  },
+  targetBar: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    marginTop: 6,
+  },
+  targetChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: ROUNDING.pill,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  targetChipActive: {
+    backgroundColor: '#059669',
+    borderColor: '#10B981',
+  },
+  targetChipText: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  targetChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   overlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 20,
+    paddingVertical: 10,
   },
   scanFrame: {
-    width: 250,
-    height: 250,
+    width: 260,
+    height: 260,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.03)',
+    overflow: 'hidden',
   },
   scanFrameSuccess: {
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -313,7 +533,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 32,
     height: 32,
-    borderColor: COLORS.status.vulnerable,
+    borderColor: '#F59E0B',
   },
   cornerSuccess: {
     borderColor: '#10B981',
@@ -346,6 +566,20 @@ const styles = StyleSheet.create({
     borderRightWidth: 4,
     borderBottomRightRadius: 16,
   },
+  scanLaser: {
+    position: 'absolute',
+    top: 10,
+    left: 12,
+    right: 12,
+    height: 2.5,
+    backgroundColor: '#F59E0B',
+    borderRadius: 2,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 6,
+    elevation: 6,
+  },
   scanningPill: {
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -356,135 +590,206 @@ const styles = StyleSheet.create({
   },
   scanningText: {
     fontFamily: FONTS.sansMedium,
-    color: COLORS.white,
-    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
+  },
+  scanningPillAnalyzing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: ROUNDING.pill,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  scanningTextAnalyzing: {
+    fontFamily: FONTS.sansBold,
+    color: '#F59E0B',
+    fontSize: 12,
   },
   scanningPillSuccess: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: ROUNDING.pill,
-    backgroundColor: 'rgba(16, 185, 129, 0.9)',
+    backgroundColor: 'rgba(16, 185, 129, 0.95)',
   },
   scanningTextSuccess: {
     fontFamily: FONTS.sansBold,
     color: '#FFFFFF',
-    fontSize: 14,
-  },
-  hintText: {
-    fontFamily: FONTS.sansMedium,
-    color: 'rgba(255,255,255,0.8)',
     fontSize: 13,
+  },
+  bottomContainer: {
+    paddingHorizontal: 18,
+  },
+  shutterContainer: {
+    alignItems: 'center',
+    gap: 14,
+  },
+  guidanceHint: {
+    fontFamily: FONTS.sans,
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 12,
     textAlign: 'center',
   },
-  detectedCardContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 8,
-  },
-  detectedCard: {
-    flexDirection: 'row',
+  scanShutterButton: {
+    width: '100%',
+    height: 56,
+    backgroundColor: '#059669',
+    borderRadius: 28,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(18, 48, 28, 0.95)',
-    borderWidth: 1.5,
-    borderColor: '#10B981',
-    borderRadius: 18,
-    padding: 16,
-    shadowColor: '#000',
+    shadowColor: '#059669',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 6,
   },
-  detectedCardLeft: {
-    flex: 1,
-    marginRight: 12,
+  scanShutterButtonBusy: {
+    backgroundColor: '#047857',
   },
-  detectedCardTag: {
+  shutterInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  shutterLabel: {
     fontFamily: FONTS.sansBold,
-    fontSize: 10,
-    color: '#34D399',
-    letterSpacing: 1,
-    marginBottom: 2,
-  },
-  detectedCardTitle: {
-    fontFamily: FONTS.serif,
-    fontSize: 16,
     color: '#FFFFFF',
+    fontSize: 15,
+    letterSpacing: 0.8,
   },
-  detectedCardDesc: {
-    fontFamily: FONTS.sans,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
-    fontStyle: 'italic',
+  detectedCard: {
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    borderWidth: 1.5,
+    borderColor: '#10B981',
+    borderRadius: 22,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 10,
   },
-  detectedCardButton: {
+  detectedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  verifiedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#10B981',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
   },
-  detectedCardButtonText: {
+  verifiedText: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 11,
+    color: '#34D399',
+    letterSpacing: 1,
+  },
+  rescanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: ROUNDING.pill,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  rescanText: {
+    fontFamily: FONTS.sans,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.75)',
+  },
+  animalProfileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  detectedThumbnail: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
+    marginRight: 14,
+    backgroundColor: '#334155',
+  },
+  animalInfoWrap: {
+    flex: 1,
+  },
+  detectedTitle: {
+    fontFamily: FONTS.serif,
+    fontSize: 17,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  detectedSub: {
+    fontFamily: FONTS.sans,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.65)',
+    fontStyle: 'italic',
+    marginTop: 2,
+    marginBottom: 6,
+  },
+  statusPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    borderColor: 'rgba(239, 68, 68, 0.4)',
+  },
+  statusPillText: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: 10,
+    color: '#F87171',
+  },
+  actionButtonGroup: {
+    gap: 10,
+  },
+  trueArButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FBBF24',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    gap: 12,
+  },
+  trueArTextWrap: {
+    flex: 1,
+  },
+  trueArBtnTitle: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 13,
+    color: '#1E293B',
+  },
+  trueArBtnSub: {
+    fontFamily: FONTS.sans,
+    fontSize: 11,
+    color: '#475569',
+    marginTop: 1,
+  },
+  studioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    gap: 8,
+  },
+  studioBtnText: {
     fontFamily: FONTS.sansBold,
     fontSize: 13,
     color: '#FFFFFF',
-  },
-  bottomControls: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  tipBanner: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: ROUNDING.pill,
-    alignSelf: 'center',
-  },
-  tipText: {
-    fontFamily: FONTS.sans,
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-  },
-  controlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  controlPlaceholder: {
-    width: 60,
-  },
-  captureButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  captureButtonActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.4)',
-  },
-  captureButtonInner: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: COLORS.status.vulnerable,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  controlButton: {
-    width: 60,
-    alignItems: 'center',
-    gap: 4,
-  },
-  controlLabel: {
-    fontFamily: FONTS.sansMedium,
-    color: COLORS.white,
-    fontSize: 11,
   },
 });

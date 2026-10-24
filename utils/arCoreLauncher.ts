@@ -1,16 +1,18 @@
-import { Linking, Platform, Alert } from 'react-native';
+import { NativeModules, Linking, Platform, Alert } from 'react-native';
+
+const { NativeAR } = NativeModules;
 
 export const AR_MODEL_URLS: Record<string, { url: string; title: string }> = {
   leopard: {
-    url: 'https://files.catbox.moe/cm3829.glb',
+    url: 'https://raw.githubusercontent.com/kalishjay/Ahcos-of-wild-new/main/assets/models/Leopard.glb',
     title: 'Sri Lankan Leopard',
   },
   langur: {
-    url: 'https://files.catbox.moe/9nt1n2.glb',
+    url: 'https://raw.githubusercontent.com/kalishjay/Ahcos-of-wild-new/main/assets/models/Langur.glb',
     title: 'Purple-faced Langur',
   },
   pangolin: {
-    url: 'https://files.catbox.moe/5wc32y.glb',
+    url: 'https://raw.githubusercontent.com/kalishjay/Ahcos-of-wild-new/main/assets/models/Pangolin.glb',
     title: 'Sri Lankan Pangolin',
   },
 };
@@ -28,8 +30,8 @@ export function getARModelInfo(speciesId?: string) {
 
 /**
  * Launch true room surface-detecting AR via Google Scene Viewer (ARCore).
- * Scans real floors/tables, shows tracking dots, and anchors the
- * 3D animal directly onto the detected surface at realistic scale.
+ * Automatically bypasses the "Open with" chooser by directly launching
+ * Google Play Services for AR (com.google.ar.core).
  */
 export async function launchTrueAR(speciesId: string, customTitle?: string): Promise<boolean> {
   const info = getARModelInfo(speciesId);
@@ -39,10 +41,20 @@ export async function launchTrueAR(speciesId: string, customTitle?: string): Pro
   }
 
   const animalTitle = customTitle || info.title;
+
+  // 1. Try Native AR Module (Directly opens com.google.ar.core with NO chooser!)
+  if (Platform.OS === 'android' && NativeAR?.launchAR) {
+    try {
+      await NativeAR.launchAR(info.url, animalTitle);
+      return true;
+    } catch (e) {
+      console.warn('NativeAR launch failed, falling back to Linking:', e);
+    }
+  }
+
+  // 2. Fallback to Linking with Google Scene Viewer intent
   const title = encodeURIComponent(animalTitle);
   const fileUrl = encodeURIComponent(info.url);
-
-  // Universal Scene Viewer URL — handles surface detection via Google Play Services for AR
   const sceneViewerUrl = `https://arvr.google.com/scene-viewer/1.0?file=${fileUrl}&mode=ar_only&title=${title}&resizable=true`;
 
   try {

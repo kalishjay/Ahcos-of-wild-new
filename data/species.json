@@ -6,13 +6,12 @@
     "category": "Mammals",
     "conservationStatus": "Endangered",
     "populationEstimate": "~700 left",
-    "mainHabitat": "Rainforests",
+    "mainHabitat": "Rainforests & Dry Scrubs",
     "description": "The Sri Lankan leopard is the island's apex predator, ruling both dry scrubs and cloudy mountain hills. Highly solitary and masterfully camouflaged, they play a critical role in managing herbivore numbers, keeping Sri Lanka's unique ecosystems in perfect, delicate balance.",
     "imageUrls": {
-      "hero": "https://images.unsplash.com/photo-1561731216-c3a4d99437d5?q=80&w=800&auto=format&fit=crop",
+      "hero": "https://files.catbox.moe/88hq76.jpg",
       "gallery": [
-        "https://images.unsplash.com/photo-1629813292415-3fb8f30d0758?q=80&w=400&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1558504381-80f4f7281f6d?q=80&w=400&auto=format&fit=crop"
+        "https://files.catbox.moe/88hq76.jpg"
       ]
     },
     "modelUrl": "Leopard.glb",
@@ -25,12 +24,12 @@
     "category": "Mammals",
     "conservationStatus": "Critically Endangered",
     "populationEstimate": "Declining",
-    "mainHabitat": "Wet zone canopy",
+    "mainHabitat": "Wet zone closed canopy",
     "description": "An incredible long-tailed leaf-eating monkey found only in Sri Lanka's closed canopy forests. Their haunting, loud whooping calls can be heard echoing through the dense woods at dawn.",
     "imageUrls": {
-      "hero": "https://images.unsplash.com/photo-1534008897995-27a23e859048?q=80&w=600&auto=format&fit=crop",
+      "hero": "https://files.catbox.moe/5ctc2m.jpg",
       "gallery": [
-        "https://images.unsplash.com/photo-1582298538104-1b1511195610?q=80&w=400&auto=format&fit=crop"
+        "https://files.catbox.moe/5ctc2m.jpg"
       ]
     },
     "modelUrl": "Langur.glb",
@@ -46,8 +45,10 @@
     "mainHabitat": "Lowland rainforest floor",
     "description": "Also known as the Indian Pangolin, this elusive, scaly anteater is a primarily nocturnal creature. Sadly, they are highly threatened due to illegal poaching for their scales and meat.",
     "imageUrls": {
-      "hero": "https://upload.wikimedia.org/wikipedia/commons/9/9d/IndianPangolin.jpg",
-      "gallery": []
+      "hero": "https://files.catbox.moe/7j7j3c.jpg",
+      "gallery": [
+        "https://files.catbox.moe/7j7j3c.jpg"
+      ]
     },
     "modelUrl": "Pangolin.glb",
     "shortBlurb": "A rare, armored mammal threatened by illegal poaching."

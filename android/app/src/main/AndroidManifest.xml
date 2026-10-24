@@ -8,6 +8,8 @@
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion"/>
   <queries>
     <package android:name="com.google.ar.core"/>
+    <package android:name="com.google.android.googlequicksearchbox"/>
+    <package android:name="com.android.chrome"/>
     <intent>
       <action android:name="android.intent.action.VIEW"/>
       <category android:name="android.intent.category.BROWSABLE"/>
