@@ -1,8 +1,3 @@
-/**
- * Barrel re-export — Metro prefers .native.tsx on native and .web.tsx on web.
- * This file acts as a safe fallback (same content as the web stub) in case
- * neither platform-specific file is resolved.
- */
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, FONTS, SIZES } from '../constants/theme';
@@ -14,6 +9,8 @@ export interface Model3DViewerProps {
   scaleMultiplier?: number;
   rotationY?: number;
   autoRotate?: boolean;
+  resetCounter?: number;
+  onARStatusChange?: (state: 'SCANNING' | 'LOCKED', progress: number) => void;
 }
 
 export function Model3DViewer(_props: Model3DViewerProps) {
@@ -31,7 +28,7 @@ export function Model3DViewer(_props: Model3DViewerProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#181c24',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,

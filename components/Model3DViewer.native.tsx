@@ -1,16 +1,10 @@
 import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { View, StyleSheet, Platform, NativeModules, DeviceEventEmitter } from 'react-native';
+import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { VIEWER_HTML } from '../assets/viewer/viewerHtml';
+import { Model3DViewerProps } from './Model3DViewer';
 
-export interface Model3DViewerProps {
-  modelRequire?: number;
-  speciesId?: string;
-  isAR?: boolean;
-  scaleMultiplier?: number;
-  rotationY?: number;
-  autoRotate?: boolean;
-}
+const { NativeAR } = NativeModules;
 
 export function Model3DViewer({
   speciesId,
@@ -18,22 +12,49 @@ export function Model3DViewer({
   scaleMultiplier = 1,
   rotationY = 0,
   autoRotate = false,
+  resetCounter = 0,
+  onARStatusChange,
 }: Model3DViewerProps) {
   const webViewRef = useRef<WebView>(null);
 
   const handleLoadEnd = () => {
     if (!webViewRef.current) return;
 
-    // Instantly renders the embedded model from HTML memory — 0ms, 100% offline
     webViewRef.current.injectJavaScript(`
-      window.setBackgroundMode(${isAR ? 'true' : 'false'});
       window.showSpecies("${speciesId || 'leopard'}");
+      window.setBackgroundMode(${isAR ? 'true' : 'false'});
       window.setScaleMultiplier(${scaleMultiplier});
       window.setRotationY(${rotationY});
       window.setAutoRotate(${autoRotate ? 'true' : 'false'});
       true;
     `);
   };
+
+  // Start / Stop hardware IMU sensor stream for real-time AR surface & world tracking
+  useEffect(() => {
+    if (!isAR) {
+      NativeAR?.stopARTracking?.().catch(() => {});
+      return;
+    }
+
+    NativeAR?.startARTracking?.().catch(() => {});
+    const sub = DeviceEventEmitter.addListener('onARPoseUpdate', (data) => {
+      if (!webViewRef.current || !data) return;
+      const p = Number(data.pitch || 0).toFixed(4);
+      const r = Number(data.roll || 0).toFixed(4);
+      const y = Number(data.yaw || 0).toFixed(4);
+      const s = Number(data.stability ?? 0.85).toFixed(3);
+      webViewRef.current.injectJavaScript(`
+        if (window.onNativeSensor) window.onNativeSensor(${p}, ${r}, ${y}, ${s});
+        true;
+      `);
+    });
+
+    return () => {
+      sub.remove();
+      NativeAR?.stopARTracking?.().catch(() => {});
+    };
+  }, [isAR]);
 
   useEffect(() => {
     webViewRef.current?.injectJavaScript(`
@@ -63,6 +84,26 @@ export function Model3DViewer({
     `);
   }, [isAR]);
 
+  useEffect(() => {
+    if (resetCounter > 0) {
+      webViewRef.current?.injectJavaScript(`
+        if (window.resetARSurface) window.resetARSurface();
+        true;
+      `);
+    }
+  }, [resetCounter]);
+
+  const handleMessage = (event: WebViewMessageEvent) => {
+    try {
+      const payload = JSON.parse(event.nativeEvent.data);
+      if (payload?.type === 'AR_STATUS' && onARStatusChange) {
+        onARStatusChange(payload.state, Number(payload.progress || 0));
+      }
+    } catch {
+      // Ignore non-JSON messages
+    }
+  };
+
   return (
     <View style={[styles.container, isAR && styles.transparentContainer]}>
       <WebView
@@ -70,6 +111,7 @@ export function Model3DViewer({
         originWhitelist={['*']}
         source={{ html: VIEWER_HTML }}
         onLoadEnd={handleLoadEnd}
+        onMessage={handleMessage}
         style={[styles.webView, isAR && styles.transparentWebView]}
         containerStyle={[styles.container, isAR && styles.transparentContainer]}
         scalesPageToFit={false}
@@ -90,14 +132,14 @@ export function Model3DViewer({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#181c24',
   },
   transparentContainer: {
     backgroundColor: 'transparent',
   },
   webView: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#181c24',
   },
   transparentWebView: {
     backgroundColor: 'transparent',

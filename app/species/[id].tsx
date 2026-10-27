@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Share } fr
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { COLORS, FONTS, ROUNDING, SIZES } from '../../constants/theme';
 import speciesData from '../../data/species.json';
-import { ArrowLeft, Share2, Box } from 'lucide-react-native';
+import { ArrowLeft, Share2, Box, ScanLine } from 'lucide-react-native';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../../context/AppContext';
@@ -101,13 +101,20 @@ export default function SpeciesDetailScreen() {
         )}
 
         <PrimaryButton
-          label="View in AR / 3D"
-          icon={Box}
+          label="Scan Photo for AR View"
+          icon={ScanLine}
           style={styles.arButton}
+          onPress={() => router.push('/scanner')}
+        />
+
+        <PrimaryButton
+          label="View in 3D Museum Hall"
+          icon={Box}
+          style={{ marginTop: 12 }}
           onPress={() =>
             router.push({
               pathname: '/viewer/[id]',
-              params: { id: species.id, mode: 'ar' },
+              params: { id: species.id, mode: 'studio' },
             })
           }
         />

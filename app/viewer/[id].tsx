@@ -1,5 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Vibration,
+  Modal,
+  ScrollView,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { COLORS, FONTS, SIZES, ROUNDING } from '../../constants/theme';
 import speciesData from '../../data/species.json';
@@ -9,69 +17,43 @@ import {
   X,
   Camera,
   Box,
-  Plus,
-  Minus,
-  RotateCcw,
   RotateCw,
   RefreshCw,
   Info,
-  Sliders,
   Sparkles,
+  MapPin,
+  ShieldAlert,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getModelRequire } from '../../utils/modelPreloader';
-import { launchTrueAR } from '../../utils/arCoreLauncher';
 
 export default function ViewerScreen() {
   const params = useLocalSearchParams<{ id: string; mode?: string }>();
-  // useLocalSearchParams can return string | string[] — normalise to string
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const initialMode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
 
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  // Mode: AR (camera background) or Studio (3D dark background)
   const [isAR, setIsAR] = useState(initialMode !== 'studio');
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraReady, setCameraReady] = useState(false);
 
-  // Surface detection pulse animation
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  // AR Surface Tracking state reported by WebView + NativeAR sensor engine
+  const [arSurfaceState, setArSurfaceState] = useState<'SCANNING' | 'LOCKED'>('SCANNING');
+  const [surfaceProgress, setSurfaceProgress] = useState(0);
 
-  // Short delay before mounting CameraView to give Android Camera HAL
-  // time to release any previous camera session cleanly.
+  // Minimal viewer controls
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [resetCounter, setResetCounter] = useState(0);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setCameraReady(true);
     }, 120);
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.14,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1.0,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulseAnim]);
-
-  // Transformations
-  const [scaleMultiplier, setScaleMultiplier] = useState(1.0);
-  const [rotationY, setRotationY] = useState(0);
-  const [autoRotate, setAutoRotate] = useState(false);
-  const [showControls, setShowControls] = useState(true);
 
   const cleanId = (id || '').trim().toLowerCase();
   const species = speciesData.find(
@@ -82,65 +64,60 @@ export default function ViewerScreen() {
       cleanId.includes(s.id.toLowerCase())
   );
 
-  // Request camera permission if AR is requested and permission isn't granted yet
   useEffect(() => {
     if (isAR && permission && !permission.granted) {
       requestPermission();
     }
   }, [isAR, permission, requestPermission]);
 
+  const handleARStatusChange = useCallback((state: 'SCANNING' | 'LOCKED', progress: number) => {
+    setArSurfaceState(prev => {
+      if (prev !== 'LOCKED' && state === 'LOCKED') {
+        Vibration.vibrate(45);
+      }
+      return state;
+    });
+    setSurfaceProgress(progress);
+  }, []);
+
   if (!species) {
     return (
       <View style={[styles.container, styles.center]}>
         <Text style={styles.errorText}>Species not found</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
-          <X color={COLORS.white} size={24} />
+        <TouchableOpacity style={styles.glassCircleBtn} onPress={() => router.back()}>
+          <X color={COLORS.white} size={22} />
         </TouchableOpacity>
       </View>
     );
   }
 
   const modelRequire = getModelRequire(species.modelUrl || species.id);
-
-  const handleZoomIn = () => {
-    setScaleMultiplier(prev => Math.min(Number((prev + 0.2).toFixed(1)), 3.0));
-  };
-
-  const handleZoomOut = () => {
-    setScaleMultiplier(prev => Math.max(Number((prev - 0.2).toFixed(1)), 0.4));
-  };
-
-  const handleRotateCcw = () => {
-    setRotationY(prev => prev - Math.PI / 6);
-  };
-
-  const handleRotateCw = () => {
-    setRotationY(prev => prev + Math.PI / 6);
-  };
-
-  const handleReset = () => {
-    setScaleMultiplier(1.0);
-    setRotationY(0);
-    setAutoRotate(false);
-  };
+  const isCameraActive = isAR && Boolean(permission?.granted) && cameraReady;
 
   const toggleMode = () => {
     const nextAR = !isAR;
     setIsAR(nextAR);
-    if (nextAR && permission && !permission.granted) {
-      requestPermission();
+    if (nextAR) {
+      setArSurfaceState('SCANNING');
+      setSurfaceProgress(0);
+      if (permission && !permission.granted) {
+        requestPermission();
+      }
     }
   };
 
-  const handleLaunchARCore = () => {
-    launchTrueAR(species.id, species.commonName);
+  const handleReset = () => {
+    setAutoRotate(false);
+    if (isCameraActive) {
+      setArSurfaceState('SCANNING');
+      setSurfaceProgress(0);
+    }
+    setResetCounter(c => c + 1);
   };
-
-  const isCameraActive = isAR && Boolean(permission?.granted) && cameraReady;
 
   return (
     <View style={[styles.container, isCameraActive && styles.arBackground]}>
-      {/* ── AR Camera Background (underneath 3D canvas) ── */}
+      {/* ── Live Camera Feed (Underneath 3D Surface Canvas in AR Mode) ── */}
       {isCameraActive && (
         <CameraView
           style={StyleSheet.absoluteFill}
@@ -152,212 +129,194 @@ export default function ViewerScreen() {
       {isAR && permission && !permission.granted && (
         <View style={[styles.permissionOverlay, { paddingTop: insets.top + 70 }]}>
           <View style={styles.permissionCard}>
-            <Camera color={COLORS.status.vulnerable} size={40} />
+            <Camera color="#34D399" size={36} />
             <Text style={styles.permissionTitle}>Camera Access Required</Text>
             <Text style={styles.permissionDesc}>
-              Echoes needs your camera to render {species.commonName} in Augmented Reality.
+              Enable camera access to detect surfaces and place {species.commonName} in AR.
             </Text>
             <TouchableOpacity style={styles.primaryActionButton} onPress={requestPermission}>
               <Text style={styles.primaryActionText}>Enable Camera</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.secondaryActionButton} onPress={() => setIsAR(false)}>
-              <Text style={styles.secondaryActionText}>Switch to 3D Studio Mode</Text>
+              <Text style={styles.secondaryActionText}>Switch to 3D Museum Hall</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* ── Surface Detection Indicator in AR mode ── */}
-      {isCameraActive && (
-        <View pointerEvents="none" style={styles.surfaceIndicatorContainer}>
-          <Animated.View style={[styles.surfaceReticle, { transform: [{ scale: pulseAnim }] }]}>
-            <View style={styles.surfaceReticleInner} />
-          </Animated.View>
-          <View style={styles.surfaceShadowBlob} />
-        </View>
-      )}
-
-      {/* ── 3D Model Canvas ── */}
+      {/* ── 3D Surface AR & Museum Hall Canvas ── */}
       {modelRequire !== null ? (
         <Model3DViewer
           speciesId={species.id}
           modelRequire={modelRequire}
           isAR={isCameraActive}
-          scaleMultiplier={scaleMultiplier}
-          rotationY={rotationY}
           autoRotate={autoRotate}
+          resetCounter={resetCounter}
+          onARStatusChange={handleARStatusChange}
         />
       ) : (
         <View style={[styles.center, { flex: 1 }]}>
-          <Text style={styles.errorText}>🦅</Text>
-          <Text style={styles.errorSubtext}>3D model coming soon</Text>
+          <Text style={styles.errorText}>3D Exhibit Unavailable</Text>
         </View>
       )}
 
-      {/* ── Overlaid Header ── */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
+      {/* ── Sleek Minimalist Top Bar ── */}
+      <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, 22) }]}>
         <TouchableOpacity
-          style={styles.circleButton}
+          style={styles.glassCircleBtn}
           onPress={() => router.back()}
-          accessibilityLabel="Back"
+          accessibilityLabel="Close Viewer"
         >
-          <X color={COLORS.white} size={22} />
+          <X color={COLORS.white} size={20} />
         </TouchableOpacity>
 
-        <View style={styles.titleContainer}>
-          <Text style={styles.title} numberOfLines={1}>{species.commonName}</Text>
-          <View style={styles.badgeRow}>
-            <View style={[styles.modeBadge, isCameraActive ? styles.modeBadgeAR : styles.modeBadgeStudio]}>
-              <Text style={styles.modeBadgeText}>
-                {isCameraActive ? '📷 AR CAMERA MODE' : '🪐 3D STUDIO'}
-              </Text>
-            </View>
+        {/* Center Exhibit Pill with Live Status Dot */}
+        <View style={styles.centerStatusPill}>
+          <Text style={styles.speciesTitle} numberOfLines={1}>
+            {species.commonName}
+          </Text>
+          <View style={styles.statusSubRow}>
+            <View
+              style={[
+                styles.statusDot,
+                !isCameraActive
+                  ? styles.statusDotMuseum
+                  : arSurfaceState === 'LOCKED'
+                  ? styles.statusDotLocked
+                  : styles.statusDotScanning,
+              ]}
+            />
+            <Text style={styles.statusSubText}>
+              {!isCameraActive
+                ? 'Museum 3D Hall'
+                : arSurfaceState === 'LOCKED'
+                ? 'Surface Anchored'
+                : `Detecting Surface ${surfaceProgress}%`}
+            </Text>
           </View>
         </View>
 
-        {/* Toggle Mode Button: AR <-> 3D Studio */}
+        {/* Mode Switch Pill (AR <-> Museum 3D) */}
         <TouchableOpacity
-          style={[styles.circleButton, isCameraActive && styles.activeModeButton]}
+          style={[styles.modeSwitchPill, !isCameraActive && styles.modeSwitchPillMuseum]}
           onPress={toggleMode}
-          accessibilityLabel="Toggle AR / Studio mode"
+          activeOpacity={0.85}
         >
           {isCameraActive ? (
-            <Box color={COLORS.white} size={20} />
+            <>
+              <Box color="#FDE68A" size={16} />
+              <Text style={styles.modeSwitchText}>3D Hall</Text>
+            </>
           ) : (
-            <Camera color={COLORS.white} size={20} />
+            <>
+              <Sparkles color="#34D399" size={16} />
+              <Text style={styles.modeSwitchText}>AR View</Text>
+            </>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* ── Floating AR Surface Detection Launch Banner ── */}
-      {isCameraActive && (
-        <View style={[styles.floatingArBanner, { top: Math.max(insets.top + 76, 92) }]}>
-          <TouchableOpacity
-            style={styles.floatingArButton}
-            onPress={handleLaunchARCore}
-            activeOpacity={0.85}
-          >
-            <Sparkles color="#FCD34D" size={18} />
-            <View style={styles.floatingArTextWrap}>
-              <Text style={styles.floatingArTitle}>Detect Floor / Table (True AR)</Text>
-              <Text style={styles.floatingArSubtitle}>Tap to scan & anchor on your real surface</Text>
+      {/* ── Surface Scanning Guidance Pill (Only while scanning surface in AR) ── */}
+      {isCameraActive && arSurfaceState === 'SCANNING' && (
+        <View pointerEvents="none" style={styles.scanGuidanceWrap}>
+          <View style={styles.scanGuidanceCard}>
+            <View style={styles.progressBarTrack}>
+              <View style={[styles.progressBarFill, { width: `${surfaceProgress}%` }]} />
             </View>
-          </TouchableOpacity>
+            <Text style={styles.scanGuidanceTitle}>Scanning Floor / Table Surface...</Text>
+            <Text style={styles.scanGuidanceSub}>
+              Point camera slightly downward at a flat surface or tap the green ring
+            </Text>
+          </View>
         </View>
       )}
 
-      {/* ── Bottom HUD: Controls & Gestures ── */}
-      <View style={[styles.hudContainer, { paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
-        {showControls ? (
-          <View style={styles.hudCard}>
-            {/* Direct ARCore Surface Launch Button */}
-            <TouchableOpacity
-              style={styles.arCoreLaunchButton}
-              onPress={handleLaunchARCore}
-              activeOpacity={0.85}
-            >
-              <Sparkles color={COLORS.white} size={16} />
-              <Text style={styles.arCoreLaunchText}>Place on Floor / Table (ARCore)</Text>
-            </TouchableOpacity>
+      {/* ── Sleek Minimalist Bottom Dock (Only 3 Clean Actions) ── */}
+      <View style={[styles.bottomDockWrap, { paddingBottom: Math.max(insets.bottom + 14, 24) }]}>
+        <Text style={styles.gestureHintText}>
+          {isCameraActive && arSurfaceState === 'SCANNING'
+            ? 'Hold steady to anchor 3D animation on surface'
+            : 'Drag to rotate • Pinch with 2 fingers to resize'}
+        </Text>
 
-            {/* Scale Bar */}
-            <View style={styles.controlRow}>
-              <Text style={styles.controlSectionLabel}>SCALE</Text>
-              <View style={styles.scaleControls}>
-                <TouchableOpacity
-                  style={styles.hudButton}
-                  onPress={handleZoomOut}
-                  disabled={scaleMultiplier <= 0.4}
-                >
-                  <Minus color={scaleMultiplier <= 0.4 ? 'rgba(255,255,255,0.3)' : COLORS.white} size={18} />
-                </TouchableOpacity>
-
-                <View style={styles.scaleDisplay}>
-                  <Text style={styles.scaleText}>{Math.round(scaleMultiplier * 100)}%</Text>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.hudButton}
-                  onPress={handleZoomIn}
-                  disabled={scaleMultiplier >= 3.0}
-                >
-                  <Plus color={scaleMultiplier >= 3.0 ? 'rgba(255,255,255,0.3)' : COLORS.white} size={18} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Rotation & Reset Row */}
-            <View style={[styles.controlRow, { marginTop: 10 }]}>
-              <Text style={styles.controlSectionLabel}>ROTATE</Text>
-              <View style={styles.buttonGroup}>
-                <TouchableOpacity
-                  style={styles.hudButton}
-                  onPress={handleRotateCcw}
-                  accessibilityLabel="Rotate counter-clockwise"
-                >
-                  <RotateCcw color={COLORS.white} size={18} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.hudButton, autoRotate && styles.activeHudButton]}
-                  onPress={() => setAutoRotate(prev => !prev)}
-                  accessibilityLabel="Toggle auto rotate"
-                >
-                  <RefreshCw color={autoRotate ? COLORS.white : 'rgba(255,255,255,0.8)'} size={18} />
-                  <Text style={[styles.hudButtonSubtext, autoRotate && styles.activeHudButtonText]}>Auto</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.hudButton}
-                  onPress={handleRotateCw}
-                  accessibilityLabel="Rotate clockwise"
-                >
-                  <RotateCw color={COLORS.white} size={18} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.hudButton, styles.resetButton]}
-                  onPress={handleReset}
-                  accessibilityLabel="Reset scale and rotation"
-                >
-                  <Text style={styles.resetButtonText}>Reset</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Quick Link to Species Fact Sheet */}
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={styles.factButton}
-                onPress={() => router.push(`/species/${species.id}`)}
-              >
-                <Info color={COLORS.status.vulnerable} size={16} />
-                <Text style={styles.factButtonText}>View Species Fact Sheet</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.toggleHudButton}
-                onPress={() => setShowControls(false)}
-              >
-                <Text style={styles.toggleHudText}>Hide</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
+        <View style={styles.glassCapsuleDock}>
           <TouchableOpacity
-            style={styles.showHudPill}
-            onPress={() => setShowControls(true)}
+            style={styles.dockActionBtn}
+            onPress={handleReset}
+            activeOpacity={0.78}
           >
-            <Sliders color={COLORS.white} size={16} />
-            <Text style={styles.showHudText}>Show Controls</Text>
+            <RefreshCw color="#E2E8F0" size={17} />
+            <Text style={styles.dockActionLabel}>
+              {isCameraActive ? 'Re-Anchor' : 'Reset View'}
+            </Text>
           </TouchableOpacity>
-        )}
 
-        {/* Gesture Hint Pill */}
-        <View pointerEvents="none" style={styles.hintContainer}>
-          <Text style={styles.hintText}>Pinch to zoom · 1-finger drag to rotate 360°</Text>
+          <View style={styles.dockDivider} />
+
+          <TouchableOpacity
+            style={[styles.dockActionBtn, autoRotate && styles.dockActionBtnActive]}
+            onPress={() => setAutoRotate(r => !r)}
+            activeOpacity={0.78}
+          >
+            <RotateCw color={autoRotate ? '#34D399' : '#E2E8F0'} size={17} />
+            <Text style={[styles.dockActionLabel, autoRotate && styles.dockActionLabelActive]}>
+              Auto Orbit
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.dockDivider} />
+
+          <TouchableOpacity
+            style={styles.dockActionBtn}
+            onPress={() => setShowInfoModal(true)}
+            activeOpacity={0.78}
+          >
+            <Info color="#FDE68A" size={17} />
+            <Text style={styles.dockActionLabel}>Exhibit Info</Text>
+          </TouchableOpacity>
         </View>
       </View>
+
+      {/* ── Museum Plaque Species Info Modal ── */}
+      <Modal
+        visible={showInfoModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowInfoModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalSheet, { paddingBottom: Math.max(insets.bottom + 20, 28) }]}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalMuseumTag}>NATIONAL MUSEUM ARCHIVE</Text>
+                <Text style={styles.modalTitle}>{species.commonName}</Text>
+                <Text style={styles.modalSciName}>{species.scientificName}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setShowInfoModal(false)}
+              >
+                <X color="#E2E8F0" size={18} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.metaBadgesRow}>
+              <View style={styles.metaPill}>
+                <ShieldAlert color="#F87171" size={14} />
+                <Text style={styles.metaPillText}>{species.conservationStatus}</Text>
+              </View>
+              <View style={styles.metaPill}>
+                <MapPin color="#34D399" size={14} />
+                <Text style={styles.metaPillText}>{species.mainHabitat}</Text>
+              </View>
+            </View>
+
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalDesc}>{species.description}</Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -365,14 +324,21 @@ export default function ViewerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#181c24',
   },
   arBackground: {
-    backgroundColor: 'transparent',
+    backgroundColor: '#000000',
   },
   center: {
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontFamily: FONTS.serif,
+    fontSize: SIZES.large,
+    color: COLORS.white,
+    marginBottom: 16,
   },
   header: {
     position: 'absolute',
@@ -381,294 +347,185 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    zIndex: 10,
+    zIndex: 20,
   },
-  titleContainer: {
-    flex: 1,
-    marginHorizontal: 12,
-  },
-  title: {
-    fontFamily: FONTS.serif,
-    fontSize: SIZES.large,
-    color: COLORS.white,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    marginTop: 4,
-  },
-  modeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: ROUNDING.pill,
-  },
-  modeBadgeAR: {
-    backgroundColor: 'rgba(46, 125, 50, 0.7)',
-  },
-  modeBadgeStudio: {
-    backgroundColor: 'rgba(150, 110, 40, 0.7)',
-  },
-  modeBadgeText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 10,
-    color: COLORS.white,
-    letterSpacing: 1,
-  },
-  circleButton: {
+  glassCircleBtn: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  activeModeButton: {
-    backgroundColor: COLORS.status.vulnerable,
-  },
-  closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
+  centerStatusPill: {
+    flex: 1,
+    marginHorizontal: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.14)',
     alignItems: 'center',
-    marginTop: 20,
   },
-  surfaceIndicatorContainer: {
-    position: 'absolute',
-    top: '52%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 2,
+  speciesTitle: {
+    fontFamily: FONTS.serif,
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
-  surfaceReticle: {
-    width: 130,
-    height: 60,
-    borderRadius: 65,
-    borderWidth: 2,
-    borderColor: 'rgba(252, 211, 77, 0.65)',
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  surfaceReticleInner: {
-    width: 14,
-    height: 7,
-    borderRadius: 7,
-    backgroundColor: 'rgba(252, 211, 77, 0.85)',
-  },
-  surfaceShadowBlob: {
-    width: 180,
-    height: 36,
-    borderRadius: 90,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    marginTop: -20,
-  },
-  floatingArBanner: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  floatingArButton: {
+  statusSubRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(18, 48, 28, 0.92)',
-    borderWidth: 1.5,
-    borderColor: '#FCD34D',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 6,
-    gap: 12,
+    gap: 6,
+    marginTop: 2,
   },
-  floatingArTextWrap: {
-    flex: 1,
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
-  floatingArTitle: {
+  statusDotScanning: {
+    backgroundColor: '#FBBF24',
+  },
+  statusDotLocked: {
+    backgroundColor: '#10B981',
+  },
+  statusDotMuseum: {
+    backgroundColor: '#E5C168',
+  },
+  statusSubText: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.78)',
+    letterSpacing: 0.3,
+  },
+  modeSwitchPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 13,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(253, 230, 138, 0.4)',
+  },
+  modeSwitchPillMuseum: {
+    borderColor: 'rgba(52, 211, 153, 0.45)',
+  },
+  modeSwitchText: {
     fontFamily: FONTS.sansBold,
-    fontSize: 13,
+    fontSize: 12,
     color: '#FFFFFF',
   },
-  floatingArSubtitle: {
+  scanGuidanceWrap: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    bottom: 132,
+    alignItems: 'center',
+    zIndex: 15,
+  },
+  scanGuidanceCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: 'rgba(15, 23, 42, 0.82)',
+    borderWidth: 1,
+    borderColor: 'rgba(52, 211, 153, 0.4)',
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  progressBarTrack: {
+    width: '100%',
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#34D399',
+    borderRadius: 2,
+  },
+  scanGuidanceTitle: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 13,
+    color: '#A7F3D0',
+    marginBottom: 2,
+  },
+  scanGuidanceSub: {
     fontFamily: FONTS.sans,
     fontSize: 11,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: 1,
+    color: 'rgba(255, 255, 255, 0.75)',
+    textAlign: 'center',
   },
-  hudContainer: {
+  bottomDockWrap: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     alignItems: 'center',
-    zIndex: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    zIndex: 20,
   },
-  hudCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: 'rgba(18, 18, 18, 0.85)',
-    borderRadius: 20,
-    padding: 14,
+  gestureHintText: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.72)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: ROUNDING.pill,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  glassCapsuleDock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.82)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  arCoreLaunchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#1E6F38',
-    paddingVertical: 11,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-  },
-  arCoreLaunchText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 13,
-    color: COLORS.white,
-    letterSpacing: 0.5,
-  },
-  controlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  controlSectionLabel: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.5)',
-    letterSpacing: 1.5,
-    width: 60,
-  },
-  scaleControls: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  scaleDisplay: {
-    minWidth: 64,
-    paddingHorizontal: 10,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+    borderRadius: 999,
     paddingVertical: 6,
-    borderRadius: ROUNDING.pill,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
+    paddingHorizontal: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
   },
-  scaleText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 13,
-    color: COLORS.white,
-  },
-  buttonGroup: {
-    flex: 1,
+  dockActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 8,
+    gap: 7,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
   },
-  hudButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  dockActionBtnActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.18)',
   },
-  activeHudButton: {
-    backgroundColor: COLORS.status.vulnerable,
-  },
-  hudButtonSubtext: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 8,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: -2,
-  },
-  activeHudButtonText: {
-    color: COLORS.white,
-  },
-  resetButton: {
-    width: 'auto',
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  resetButtonText: {
+  dockActionLabel: {
     fontFamily: FONTS.sansMedium,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.9)',
+    color: '#E2E8F0',
   },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+  dockActionLabelActive: {
+    color: '#34D399',
+    fontFamily: FONTS.sansBold,
   },
-  factButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  factButtonText: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 12,
-    color: COLORS.status.vulnerable,
-  },
-  toggleHudButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  toggleHudText: {
-    fontFamily: FONTS.sans,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
-  },
-  showHudPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: ROUNDING.pill,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  showHudText: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 13,
-    color: COLORS.white,
-  },
-  hintContainer: {
-    marginTop: 8,
-  },
-  hintText: {
-    fontFamily: FONTS.sans,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
+  dockDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
   },
   permissionOverlay: {
     position: 'absolute',
@@ -676,72 +533,134 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundColor: 'rgba(10, 15, 26, 0.92)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-    zIndex: 5,
-    backgroundColor: '#121212',
+    padding: 28,
+    zIndex: 30,
   },
   permissionCard: {
     width: '100%',
-    maxWidth: 360,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 28,
+    backgroundColor: '#1E293B',
     borderRadius: 24,
+    padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.12)',
+    gap: 12,
   },
   permissionTitle: {
     fontFamily: FONTS.serif,
-    fontSize: SIZES.large,
-    color: COLORS.white,
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
+    fontSize: 19,
+    color: '#FFFFFF',
   },
   permissionDesc: {
     fontFamily: FONTS.sans,
-    fontSize: SIZES.small,
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.72)',
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 20,
+    marginBottom: 6,
   },
   primaryActionButton: {
     width: '100%',
-    backgroundColor: COLORS.status.vulnerable,
-    paddingVertical: 14,
-    borderRadius: ROUNDING.pill,
+    backgroundColor: '#10B981',
+    paddingVertical: 13,
+    borderRadius: 14,
     alignItems: 'center',
-    marginBottom: 10,
   },
   primaryActionText: {
     fontFamily: FONTS.sansBold,
+    color: '#FFFFFF',
     fontSize: 14,
-    color: COLORS.white,
   },
   secondaryActionButton: {
     width: '100%',
-    paddingVertical: 12,
-    borderRadius: ROUNDING.pill,
+    paddingVertical: 11,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   secondaryActionText: {
     fontFamily: FONTS.sansMedium,
+    color: '#94A3B8',
     fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
   },
-  errorText: {
-    color: COLORS.white,
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#151C28',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderTopWidth: 1,
+    borderColor: 'rgba(229, 193, 104, 0.35)',
+    padding: 22,
+    maxHeight: '62%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  modalMuseumTag: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 10,
+    color: '#E5C168',
+    letterSpacing: 1.2,
+    marginBottom: 4,
+  },
+  modalTitle: {
     fontFamily: FONTS.serif,
-    fontSize: SIZES.large,
-    marginBottom: 8,
+    fontSize: 22,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
-  errorSubtext: {
-    color: 'rgba(255,255,255,0.6)',
+  modalSciName: {
+    fontFamily: FONTS.sans,
+    fontSize: 13,
+    color: '#94A3B8',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  metaBadgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  metaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    paddingVertical: 5,
+    paddingHorizontal: 11,
+    borderRadius: 999,
+  },
+  metaPillText: {
     fontFamily: FONTS.sansMedium,
-    fontSize: SIZES.medium,
+    fontSize: 11,
+    color: '#E2E8F0',
+  },
+  modalScroll: {
+    marginTop: 4,
+  },
+  modalDesc: {
+    fontFamily: FONTS.sans,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.82)',
+    lineHeight: 22,
   },
 });
