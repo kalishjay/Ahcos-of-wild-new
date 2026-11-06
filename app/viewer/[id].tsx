@@ -23,6 +23,11 @@ import {
   Sparkles,
   MapPin,
   ShieldAlert,
+  Volume2,
+  VolumeX,
+  ChevronUp,
+  ChevronDown,
+  Compass,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getModelRequire } from '../../utils/modelPreloader';
@@ -39,13 +44,15 @@ export default function ViewerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraReady, setCameraReady] = useState(false);
 
-  // AR Surface Tracking state reported by WebView + NativeAR sensor engine
   const [arSurfaceState, setArSurfaceState] = useState<'SCANNING' | 'LOCKED'>('SCANNING');
   const [surfaceProgress, setSurfaceProgress] = useState(0);
 
-  // Minimal viewer controls
+  // Viewer Controls
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const [autoRotate, setAutoRotate] = useState(false);
   const [resetCounter, setResetCounter] = useState(0);
+  const [depthStep, setDepthStep] = useState<{ seq: number; deltaZ: number }>({ seq: 0, deltaZ: 0 });
+  const [animalCallCounter, setAnimalCallCounter] = useState(0);
   const [showInfoModal, setShowInfoModal] = useState(false);
 
   useEffect(() => {
@@ -115,6 +122,21 @@ export default function ViewerScreen() {
     setResetCounter(c => c + 1);
   };
 
+  const handleMoveForward = () => {
+    Vibration.vibrate(18);
+    setDepthStep(prev => ({ seq: prev.seq + 1, deltaZ: 0.38 }));
+  };
+
+  const handleMoveBackward = () => {
+    Vibration.vibrate(18);
+    setDepthStep(prev => ({ seq: prev.seq + 1, deltaZ: -0.38 }));
+  };
+
+  const handleTriggerCall = () => {
+    if (!soundEnabled) setSoundEnabled(true);
+    setAnimalCallCounter(c => c + 1);
+  };
+
   return (
     <View style={[styles.container, isCameraActive && styles.arBackground]}>
       {/* ── Live Camera Feed (Underneath 3D Surface Canvas in AR Mode) ── */}
@@ -129,29 +151,32 @@ export default function ViewerScreen() {
       {isAR && permission && !permission.granted && (
         <View style={[styles.permissionOverlay, { paddingTop: insets.top + 70 }]}>
           <View style={styles.permissionCard}>
-            <Camera color="#34D399" size={36} />
-            <Text style={styles.permissionTitle}>Camera Access Required</Text>
+            <Camera color="#D4AF37" size={38} />
+            <Text style={styles.permissionTitle}>Expedition Camera Access</Text>
             <Text style={styles.permissionDesc}>
-              Enable camera access to detect surfaces and place {species.commonName} in AR.
+              Enable camera access to detect real-world surfaces and anchor {species.commonName} in AR.
             </Text>
             <TouchableOpacity style={styles.primaryActionButton} onPress={requestPermission}>
               <Text style={styles.primaryActionText}>Enable Camera</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.secondaryActionButton} onPress={() => setIsAR(false)}>
-              <Text style={styles.secondaryActionText}>Switch to 3D Museum Hall</Text>
+              <Text style={styles.secondaryActionText}>Enter 3D Museum Hall</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* ── 3D Surface AR & Museum Hall Canvas ── */}
+      {/* ── 3D Surface AR & Adventure Museum Hall Canvas ── */}
       {modelRequire !== null ? (
         <Model3DViewer
           speciesId={species.id}
           modelRequire={modelRequire}
           isAR={isCameraActive}
           autoRotate={autoRotate}
+          soundEnabled={soundEnabled}
           resetCounter={resetCounter}
+          depthStep={depthStep}
+          animalCallCounter={animalCallCounter}
           onARStatusChange={handleARStatusChange}
         />
       ) : (
@@ -160,14 +185,14 @@ export default function ViewerScreen() {
         </View>
       )}
 
-      {/* ── Sleek Minimalist Top Bar ── */}
+      {/* ── Adventure + Museum Top Header Bar (with Sound On/Off Button) ── */}
       <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, 22) }]}>
         <TouchableOpacity
           style={styles.glassCircleBtn}
           onPress={() => router.back()}
           accessibilityLabel="Close Viewer"
         >
-          <X color={COLORS.white} size={20} />
+          <X color="#FDE68A" size={20} />
         </TouchableOpacity>
 
         {/* Center Exhibit Pill with Live Status Dot */}
@@ -188,32 +213,47 @@ export default function ViewerScreen() {
             />
             <Text style={styles.statusSubText}>
               {!isCameraActive
-                ? 'Museum 3D Hall'
+                ? 'Expedition Museum Hall'
                 : arSurfaceState === 'LOCKED'
-                ? 'Surface Anchored'
-                : `Detecting Surface ${surfaceProgress}%`}
+                ? 'AR Surface Locked'
+                : `Scanning Surface ${surfaceProgress}%`}
             </Text>
           </View>
         </View>
 
-        {/* Mode Switch Pill (AR <-> Museum 3D) */}
-        <TouchableOpacity
-          style={[styles.modeSwitchPill, !isCameraActive && styles.modeSwitchPillMuseum]}
-          onPress={toggleMode}
-          activeOpacity={0.85}
-        >
-          {isCameraActive ? (
-            <>
-              <Box color="#FDE68A" size={16} />
-              <Text style={styles.modeSwitchText}>3D Hall</Text>
-            </>
-          ) : (
-            <>
-              <Sparkles color="#34D399" size={16} />
-              <Text style={styles.modeSwitchText}>AR View</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        {/* Top Right Controls: Sound On/Off Toggle + AR/3D Mode Switch */}
+        <View style={styles.topRightRow}>
+          <TouchableOpacity
+            style={[styles.soundToggleBtn, !soundEnabled && styles.soundToggleBtnMuted]}
+            onPress={() => setSoundEnabled(s => !s)}
+            activeOpacity={0.8}
+            accessibilityLabel={soundEnabled ? 'Mute Sound' : 'Unmute Sound'}
+          >
+            {soundEnabled ? (
+              <Volume2 color="#FDE68A" size={18} />
+            ) : (
+              <VolumeX color="#94A3B8" size={18} />
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.modeSwitchPill, !isCameraActive && styles.modeSwitchPillMuseum]}
+            onPress={toggleMode}
+            activeOpacity={0.85}
+          >
+            {isCameraActive ? (
+              <>
+                <Box color="#FDE68A" size={15} />
+                <Text style={styles.modeSwitchText}>3D Hall</Text>
+              </>
+            ) : (
+              <>
+                <Sparkles color="#34D399" size={15} />
+                <Text style={styles.modeSwitchText}>AR View</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* ── Surface Scanning Guidance Pill (Only while scanning surface in AR) ── */}
@@ -223,20 +263,50 @@ export default function ViewerScreen() {
             <View style={styles.progressBarTrack}>
               <View style={[styles.progressBarFill, { width: `${surfaceProgress}%` }]} />
             </View>
-            <Text style={styles.scanGuidanceTitle}>Scanning Floor / Table Surface...</Text>
+            <Text style={styles.scanGuidanceTitle}>Detecting Real Floor / Table Surface...</Text>
             <Text style={styles.scanGuidanceSub}>
-              Point camera slightly downward at a flat surface or tap the green ring
+              Aim camera slightly downward at a flat surface or tap the compass ring
             </Text>
           </View>
         </View>
       )}
 
-      {/* ── Sleek Minimalist Bottom Dock (Only 3 Clean Actions) ── */}
+      {/* ── AR Forward / Backward Surface Movement Buttons (Visible when AR Surface is Locked) ── */}
+      {isCameraActive && arSurfaceState === 'LOCKED' && (
+        <View style={styles.arDepthControlsWrap}>
+          <View style={styles.arDepthHeader}>
+            <Compass color="#D4AF37" size={12} />
+            <Text style={styles.arDepthLabel}>POSITION</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.arDepthBtn}
+            onPress={handleMoveBackward}
+            activeOpacity={0.78}
+          >
+            <ChevronUp color="#FDE68A" size={18} />
+            <Text style={styles.arDepthBtnText}>Back</Text>
+          </TouchableOpacity>
+
+          <View style={styles.arDepthDivider} />
+
+          <TouchableOpacity
+            style={styles.arDepthBtn}
+            onPress={handleMoveForward}
+            activeOpacity={0.78}
+          >
+            <ChevronDown color="#34D399" size={18} />
+            <Text style={styles.arDepthBtnText}>Front</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ── Adventure + Museum Bottom Dock ── */}
       <View style={[styles.bottomDockWrap, { paddingBottom: Math.max(insets.bottom + 14, 24) }]}>
         <Text style={styles.gestureHintText}>
           {isCameraActive && arSurfaceState === 'SCANNING'
-            ? 'Hold steady to anchor 3D animation on surface'
-            : 'Drag to rotate • Pinch with 2 fingers to resize'}
+            ? 'Hold phone steady towards floor to anchor exhibit'
+            : 'Drag to rotate • Pinch to resize • Sound active'}
         </Text>
 
         <View style={styles.glassCapsuleDock}>
@@ -245,9 +315,9 @@ export default function ViewerScreen() {
             onPress={handleReset}
             activeOpacity={0.78}
           >
-            <RefreshCw color="#E2E8F0" size={17} />
+            <RefreshCw color="#FDE68A" size={16} />
             <Text style={styles.dockActionLabel}>
-              {isCameraActive ? 'Re-Anchor' : 'Reset View'}
+              {isCameraActive ? 'Re-Anchor' : 'Reset'}
             </Text>
           </TouchableOpacity>
 
@@ -258,10 +328,21 @@ export default function ViewerScreen() {
             onPress={() => setAutoRotate(r => !r)}
             activeOpacity={0.78}
           >
-            <RotateCw color={autoRotate ? '#34D399' : '#E2E8F0'} size={17} />
+            <RotateCw color={autoRotate ? '#34D399' : '#E2E8F0'} size={16} />
             <Text style={[styles.dockActionLabel, autoRotate && styles.dockActionLabelActive]}>
-              Auto Orbit
+              Orbit
             </Text>
+          </TouchableOpacity>
+
+          <View style={styles.dockDivider} />
+
+          <TouchableOpacity
+            style={styles.dockActionBtn}
+            onPress={handleTriggerCall}
+            activeOpacity={0.78}
+          >
+            <Volume2 color="#34D399" size={16} />
+            <Text style={styles.dockActionLabel}>Roar / Call</Text>
           </TouchableOpacity>
 
           <View style={styles.dockDivider} />
@@ -271,13 +352,13 @@ export default function ViewerScreen() {
             onPress={() => setShowInfoModal(true)}
             activeOpacity={0.78}
           >
-            <Info color="#FDE68A" size={17} />
-            <Text style={styles.dockActionLabel}>Exhibit Info</Text>
+            <Info color="#FDE68A" size={16} />
+            <Text style={styles.dockActionLabel}>Lore</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* ── Museum Plaque Species Info Modal ── */}
+      {/* ── Expedition Archive Species Info Modal ── */}
       <Modal
         visible={showInfoModal}
         transparent
@@ -287,8 +368,8 @@ export default function ViewerScreen() {
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalSheet, { paddingBottom: Math.max(insets.bottom + 20, 28) }]}>
             <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalMuseumTag}>NATIONAL MUSEUM ARCHIVE</Text>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <Text style={styles.modalMuseumTag}>CEYLON WILDLIFE EXPEDITION ARCHIVE</Text>
                 <Text style={styles.modalTitle}>{species.commonName}</Text>
                 <Text style={styles.modalSciName}>{species.scientificName}</Text>
               </View>
@@ -296,7 +377,7 @@ export default function ViewerScreen() {
                 style={styles.modalCloseBtn}
                 onPress={() => setShowInfoModal(false)}
               >
-                <X color="#E2E8F0" size={18} />
+                <X color="#FDE68A" size={18} />
               </TouchableOpacity>
             </View>
 
@@ -324,7 +405,7 @@ export default function ViewerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181c24',
+    backgroundColor: '#131922',
   },
   arBackground: {
     backgroundColor: '#000000',
@@ -348,46 +429,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     zIndex: 20,
   },
   glassCircleBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(15, 23, 42, 0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.16)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15, 23, 42, 0.82)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(212, 175, 55, 0.45)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   centerStatusPill: {
     flex: 1,
-    marginHorizontal: 10,
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: 'rgba(15, 23, 42, 0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
+    marginHorizontal: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    backgroundColor: 'rgba(15, 23, 42, 0.82)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(212, 175, 55, 0.4)',
     alignItems: 'center',
   },
   speciesTitle: {
     fontFamily: FONTS.serif,
-    fontSize: 15,
+    fontSize: 14,
     color: '#FFFFFF',
     fontWeight: '700',
   },
   statusSubRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     marginTop: 2,
   },
   statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   statusDotScanning: {
     backgroundColor: '#FBBF24',
@@ -396,31 +477,50 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B981',
   },
   statusDotMuseum: {
-    backgroundColor: '#E5C168',
+    backgroundColor: '#D4AF37',
   },
   statusSubText: {
     fontFamily: FONTS.sansMedium,
     fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.78)',
+    color: '#FDE68A',
     letterSpacing: 0.3,
+  },
+  topRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  soundToggleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15, 23, 42, 0.82)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(212, 175, 55, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  soundToggleBtnMuted: {
+    borderColor: 'rgba(148, 163, 184, 0.3)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
   },
   modeSwitchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 13,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    borderWidth: 1,
-    borderColor: 'rgba(253, 230, 138, 0.4)',
+    gap: 5,
+    paddingHorizontal: 11,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15, 23, 42, 0.82)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(212, 175, 55, 0.5)',
   },
   modeSwitchPillMuseum: {
-    borderColor: 'rgba(52, 211, 153, 0.45)',
+    borderColor: 'rgba(52, 211, 153, 0.55)',
   },
   modeSwitchText: {
     fontFamily: FONTS.sansBold,
-    fontSize: 12,
+    fontSize: 11,
     color: '#FFFFFF',
   },
   scanGuidanceWrap: {
@@ -434,9 +534,9 @@ const styles = StyleSheet.create({
   scanGuidanceCard: {
     width: '100%',
     maxWidth: 340,
-    backgroundColor: 'rgba(15, 23, 42, 0.82)',
-    borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.4)',
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(212, 175, 55, 0.5)',
     borderRadius: 18,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -458,14 +558,64 @@ const styles = StyleSheet.create({
   scanGuidanceTitle: {
     fontFamily: FONTS.sansBold,
     fontSize: 13,
-    color: '#A7F3D0',
+    color: '#FDE68A',
     marginBottom: 2,
   },
   scanGuidanceSub: {
     fontFamily: FONTS.sans,
     fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.75)',
+    color: 'rgba(255, 255, 255, 0.78)',
     textAlign: 'center',
+  },
+  arDepthControlsWrap: {
+    position: 'absolute',
+    right: 16,
+    bottom: 136,
+    backgroundColor: 'rgba(15, 23, 42, 0.86)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(212, 175, 55, 0.5)',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    zIndex: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  arDepthHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+    paddingHorizontal: 4,
+  },
+  arDepthLabel: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 8,
+    color: '#D4AF37',
+    letterSpacing: 0.8,
+  },
+  arDepthBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  arDepthBtnText: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 10,
+    color: '#F8FAFC',
+    marginTop: 1,
+  },
+  arDepthDivider: {
+    width: 28,
+    height: 1,
+    backgroundColor: 'rgba(212, 175, 55, 0.28)',
+    marginVertical: 3,
   },
   bottomDockWrap: {
     position: 'absolute',
@@ -473,14 +623,16 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     zIndex: 20,
   },
   gestureHintText: {
     fontFamily: FONTS.sansMedium,
     fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.72)',
-    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    color: '#FDE68A',
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.3)',
     paddingHorizontal: 14,
     paddingVertical: 4,
     borderRadius: ROUNDING.pill,
@@ -490,24 +642,24 @@ const styles = StyleSheet.create({
   glassCapsuleDock: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.82)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.16)',
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(212, 175, 55, 0.48)',
     borderRadius: 999,
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.45,
     shadowRadius: 12,
     elevation: 10,
   },
   dockActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    gap: 5,
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 11,
     borderRadius: 999,
   },
   dockActionBtnActive: {
@@ -515,8 +667,8 @@ const styles = StyleSheet.create({
   },
   dockActionLabel: {
     fontFamily: FONTS.sansMedium,
-    fontSize: 12,
-    color: '#E2E8F0',
+    fontSize: 11,
+    color: '#F8FAFC',
   },
   dockActionLabelActive: {
     color: '#34D399',
@@ -524,8 +676,8 @@ const styles = StyleSheet.create({
   },
   dockDivider: {
     width: 1,
-    height: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    height: 18,
+    backgroundColor: 'rgba(212, 175, 55, 0.25)',
   },
   permissionOverlay: {
     position: 'absolute',
@@ -541,23 +693,23 @@ const styles = StyleSheet.create({
   },
   permissionCard: {
     width: '100%',
-    backgroundColor: '#1E293B',
+    backgroundColor: '#172030',
     borderRadius: 24,
     padding: 24,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(212, 175, 55, 0.45)',
     gap: 12,
   },
   permissionTitle: {
     fontFamily: FONTS.serif,
     fontSize: 19,
-    color: '#FFFFFF',
+    color: '#FDE68A',
   },
   permissionDesc: {
     fontFamily: FONTS.sans,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.72)',
+    color: 'rgba(255,255,255,0.78)',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 6,
@@ -581,22 +733,22 @@ const styles = StyleSheet.create({
   },
   secondaryActionText: {
     fontFamily: FONTS.sansMedium,
-    color: '#94A3B8',
+    color: '#FDE68A',
     fontSize: 13,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    backgroundColor: 'rgba(0, 0, 0, 0.68)',
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: '#151C28',
+    backgroundColor: '#131B28',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    borderTopWidth: 1,
-    borderColor: 'rgba(229, 193, 104, 0.35)',
+    borderTopWidth: 1.5,
+    borderColor: 'rgba(212, 175, 55, 0.5)',
     padding: 22,
-    maxHeight: '62%',
+    maxHeight: '64%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -607,7 +759,7 @@ const styles = StyleSheet.create({
   modalMuseumTag: {
     fontFamily: FONTS.sansBold,
     fontSize: 10,
-    color: '#E5C168',
+    color: '#D4AF37',
     letterSpacing: 1.2,
     marginBottom: 4,
   },
@@ -620,7 +772,7 @@ const styles = StyleSheet.create({
   modalSciName: {
     fontFamily: FONTS.sans,
     fontSize: 13,
-    color: '#94A3B8',
+    color: '#6EE7B7',
     fontStyle: 'italic',
     marginTop: 2,
   },
@@ -628,7 +780,9 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(212, 175, 55, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.35)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -642,9 +796,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(212, 175, 55, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(212, 175, 55, 0.3)',
     paddingVertical: 5,
     paddingHorizontal: 11,
     borderRadius: 999,
@@ -652,7 +806,7 @@ const styles = StyleSheet.create({
   metaPillText: {
     fontFamily: FONTS.sansMedium,
     fontSize: 11,
-    color: '#E2E8F0',
+    color: '#FDE68A',
   },
   modalScroll: {
     marginTop: 4,
@@ -660,7 +814,7 @@ const styles = StyleSheet.create({
   modalDesc: {
     fontFamily: FONTS.sans,
     fontSize: 14,
-    color: 'rgba(255,255,255,0.82)',
+    color: 'rgba(255,255,255,0.85)',
     lineHeight: 22,
   },
 });

@@ -9,7 +9,10 @@ export interface Model3DViewerProps {
   scaleMultiplier?: number;
   rotationY?: number;
   autoRotate?: boolean;
+  soundEnabled?: boolean;
   resetCounter?: number;
+  depthStep?: { seq: number; deltaZ: number };
+  animalCallCounter?: number;
   onARStatusChange?: (state: 'SCANNING' | 'LOCKED', progress: number) => void;
 }
 
@@ -28,7 +31,7 @@ export function Model3DViewer(_props: Model3DViewerProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181c24',
+    backgroundColor: '#131922',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,

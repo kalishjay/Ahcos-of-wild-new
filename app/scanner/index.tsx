@@ -29,9 +29,9 @@ import speciesData from '../../data/species.json';
 const { NativeAR } = NativeModules;
 
 const EXHIBIT_THUMBNAILS = [
-  { id: 'leopard', name: 'Leopard', img: require('../../assets/images/targets/leopard.jpg') },
-  { id: 'langur', name: 'Langur', img: require('../../assets/images/targets/langur.jpg') },
-  { id: 'pangolin', name: 'Pangolin', img: require('../../assets/images/targets/pangolin.jpg') },
+  { id: 'leopard', name: 'Sri Lankan Leopard', img: require('../../assets/images/targets/leopard.jpg') },
+  { id: 'langur', name: 'Purple-faced Langur', img: require('../../assets/images/targets/langur.jpg') },
+  { id: 'pangolin', name: 'Sri Lankan Pangolin', img: require('../../assets/images/targets/pangolin.jpg') },
 ];
 
 export default function ExhibitScannerScreen() {
@@ -201,12 +201,12 @@ export default function ExhibitScannerScreen() {
 
         {/* Reference Strip of the 3 Scannable Animal Photos */}
         <View style={styles.referenceStrip}>
-          <Text style={styles.referenceLabel}>Scannable Exhibits:</Text>
+          <Text style={styles.referenceLabel}>TARGET EXHIBITS TO SCAN FOR AR</Text>
           <View style={styles.thumbRow}>
             {EXHIBIT_THUMBNAILS.map(item => (
               <View key={item.id} style={styles.thumbItem}>
                 <Image source={item.img} style={styles.thumbImage} />
-                <Text style={styles.thumbText}>{item.name}</Text>
+                <Text style={styles.thumbText} numberOfLines={1}>{item.name}</Text>
               </View>
             ))}
           </View>
@@ -339,69 +339,78 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: 'rgba(10, 18, 28, 0.82)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.16)',
+    borderColor: 'rgba(212, 175, 55, 0.42)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   glassIconBtnActive: {
-    backgroundColor: 'rgba(251, 191, 36, 0.22)',
+    backgroundColor: 'rgba(251, 191, 36, 0.25)',
     borderColor: '#FBBF24',
   },
   headerCenterPill: {
     paddingHorizontal: 18,
     paddingVertical: 8,
     borderRadius: ROUNDING.pill,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
+    backgroundColor: 'rgba(10, 18, 28, 0.85)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(212, 175, 55, 0.5)',
   },
   headerTitle: {
     fontFamily: FONTS.sansBold,
     fontSize: 14,
-    color: '#FFFFFF',
-    letterSpacing: 0.4,
+    color: '#FDE68A',
+    letterSpacing: 0.5,
   },
   referenceStrip: {
     alignSelf: 'center',
-    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.72)',
+    backgroundColor: 'rgba(10, 18, 28, 0.84)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(212, 175, 55, 0.4)',
     borderRadius: 16,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    gap: 10,
+    gap: 6,
     marginTop: 8,
+    maxWidth: '94%',
   },
   referenceLabel: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.7)',
+    fontFamily: FONTS.sansBold,
+    fontSize: 10,
+    color: '#D4AF37',
+    letterSpacing: 1,
   },
   thumbRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   thumbItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.25)',
   },
   thumbImage: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 5,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: '#D4AF37',
   },
   thumbText: {
     fontFamily: FONTS.sansMedium,
-    fontSize: 11,
-    color: '#E2E8F0',
+    fontSize: 10.5,
+    color: '#FEF3C7',
   },
   overlay: {
     flex: 1,

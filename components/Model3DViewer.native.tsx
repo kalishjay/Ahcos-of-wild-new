@@ -12,7 +12,10 @@ export function Model3DViewer({
   scaleMultiplier = 1,
   rotationY = 0,
   autoRotate = false,
+  soundEnabled = true,
   resetCounter = 0,
+  depthStep,
+  animalCallCounter = 0,
   onARStatusChange,
 }: Model3DViewerProps) {
   const webViewRef = useRef<WebView>(null);
@@ -21,6 +24,7 @@ export function Model3DViewer({
     if (!webViewRef.current) return;
 
     webViewRef.current.injectJavaScript(`
+      window.setSoundEnabled(${soundEnabled ? 'true' : 'false'});
       window.showSpecies("${speciesId || 'leopard'}");
       window.setBackgroundMode(${isAR ? 'true' : 'false'});
       window.setScaleMultiplier(${scaleMultiplier});
@@ -30,7 +34,6 @@ export function Model3DViewer({
     `);
   };
 
-  // Start / Stop hardware IMU sensor stream for real-time AR surface & world tracking
   useEffect(() => {
     if (!isAR) {
       NativeAR?.stopARTracking?.().catch(() => {});
@@ -79,6 +82,13 @@ export function Model3DViewer({
 
   useEffect(() => {
     webViewRef.current?.injectJavaScript(`
+      if (window.setSoundEnabled) window.setSoundEnabled(${soundEnabled ? 'true' : 'false'});
+      true;
+    `);
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    webViewRef.current?.injectJavaScript(`
       if (window.setBackgroundMode) window.setBackgroundMode(${isAR ? 'true' : 'false'});
       true;
     `);
@@ -92,6 +102,24 @@ export function Model3DViewer({
       `);
     }
   }, [resetCounter]);
+
+  useEffect(() => {
+    if (depthStep && depthStep.seq > 0) {
+      webViewRef.current?.injectJavaScript(`
+        if (window.moveAnimalDepth) window.moveAnimalDepth(${depthStep.deltaZ});
+        true;
+      `);
+    }
+  }, [depthStep]);
+
+  useEffect(() => {
+    if (animalCallCounter > 0) {
+      webViewRef.current?.injectJavaScript(`
+        if (window.triggerAnimalCall) window.triggerAnimalCall();
+        true;
+      `);
+    }
+  }, [animalCallCounter]);
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {
@@ -120,6 +148,7 @@ export function Model3DViewer({
         javaScriptEnabled={true}
         domStorageEnabled={true}
         allowFileAccess={true}
+        mediaPlaybackRequiresUserAction={false}
         mixedContentMode="always"
         androidLayerType={Platform.OS === 'android' && isAR ? 'none' : 'hardware'}
         showsHorizontalScrollIndicator={false}
@@ -132,14 +161,14 @@ export function Model3DViewer({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#181c24',
+    backgroundColor: '#131922',
   },
   transparentContainer: {
     backgroundColor: 'transparent',
   },
   webView: {
     flex: 1,
-    backgroundColor: '#181c24',
+    backgroundColor: '#131922',
   },
   transparentWebView: {
     backgroundColor: 'transparent',
